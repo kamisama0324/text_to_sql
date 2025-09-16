@@ -130,7 +130,7 @@ spring-boot-*.log
 
 # Cache directories
 .cache/
-cache/
+# cache/  # Commented out to allow src cache files
 
 # Testing
 test-output/
