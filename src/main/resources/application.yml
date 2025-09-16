@@ -49,7 +49,7 @@ spring:
   ai:
     # DeepSeek配置 (使用OpenAI兼容接口)
     openai:
-      api-key: ${DEEPSEEK_API_KEY:}
+      api-key: ${DEEPSEEK_API_KEY:sk-40e40019dd3b4b1db1c23f177a5b1e82}
       base-url: https://api.deepseek.com
       chat:
         options:
