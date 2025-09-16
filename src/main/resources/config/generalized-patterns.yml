@@ -1,0 +1,324 @@
+# 泛化SQL模式学习配置文件
+# Generalized SQL Pattern Learning Configuration
+
+# 泛化SQL模式
+generalizedPatterns:
+  # 用户-内容关联查询模式
+  - patternId: "user_content_association"
+    intentSemantics:
+      - "entity_association"
+      - "detail_query"
+    entityTypes:
+      - "user_like"
+      - "content_like"
+    sqlTemplate:
+      baseQuery: "SELECT {primary_fields}, {secondary_fields} FROM {primary_table} {primary_alias} {join_type} JOIN {secondary_table} {secondary_alias} ON {join_condition}"
+      whereClause: "{where_conditions}"
+      orderByClause: "{order_clause}"
+      limitClause: "{limit_clause}"
+      placeholders:
+        primary_fields: "{primary_alias}.*"
+        secondary_fields: "{secondary_alias}.*"
+        join_type: "LEFT"
+        join_condition: "{primary_alias}.id = {secondary_alias}.{foreign_key_field}"
+        where_conditions: ""
+        order_clause: ""
+        limit_clause: "LIMIT 100"
+    generalConfidence: 0.8
+    crossDatabaseUsage: 0
+    successByDbType:
+      mysql: 0
+      postgresql: 0
+      sqlite: 0
+
+  # 统计聚合查询模式
+  - patternId: "count_statistics"
+    intentSemantics:
+      - "count_statistics"
+      - "aggregation"
+    entityTypes:
+      - "countable_entity"
+    sqlTemplate:
+      baseQuery: "SELECT {group_fields}, COUNT({count_field}) as count FROM {primary_table} {primary_alias}"
+      whereClause: "{where_conditions}"
+      groupByClause: "GROUP BY {group_fields}"
+      orderByClause: "ORDER BY count DESC"
+      limitClause: "{limit_clause}"
+      placeholders:
+        group_fields: ""
+        count_field: "*"
+        where_conditions: ""
+        limit_clause: "LIMIT 50"
+    generalConfidence: 0.75
+    crossDatabaseUsage: 0
+    successByDbType:
+      mysql: 0
+      postgresql: 0
+      sqlite: 0
+
+  # 时间范围筛选模式
+  - patternId: "time_range_filter"
+    intentSemantics:
+      - "time_range"
+      - "filter_query"
+    entityTypes:
+      - "time_sensitive_entity"
+    sqlTemplate:
+      baseQuery: "SELECT {select_fields} FROM {primary_table} {primary_alias}"
+      whereClause: "WHERE {time_field} {time_operator} {time_value}"
+      orderByClause: "ORDER BY {time_field} DESC"
+      limitClause: "{limit_clause}"
+      placeholders:
+        select_fields: "{primary_alias}.*"
+        time_operator: ">="
+        time_value: "CURDATE()"
+        limit_clause: "LIMIT 100"
+    generalConfidence: 0.7
+    crossDatabaseUsage: 0
+    successByDbType:
+      mysql: 0
+      postgresql: 0
+      sqlite: 0
+
+# 实体语义模式
+entitySemanticPatterns:
+  # 用户类实体模式
+  - patternId: "user_like_entity"
+    semanticType: "user_like"
+    matchKeywords:
+      - "用户"
+      - "会员"
+      - "账号"
+      - "人员"
+      - "员工"
+      - "客户"
+    tableNamePatterns:
+      - ".*user.*"
+      - ".*member.*"
+      - ".*account.*"
+      - ".*people.*"
+      - ".*employee.*"
+      - ".*customer.*"
+    fieldSemanticMapping:
+      id_field: "id"
+      name_field: "name|username|nickname|real_name"
+      email_field: "email|mail"
+      phone_field: "phone|mobile|tel"
+      status_field: "status|state|is_active"
+      time_field: "created_at|create_time|register_time"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.8
+    supportedDbTypes:
+      - "mysql"
+      - "postgresql"
+      - "sqlite"
+
+  # 内容类实体模式
+  - patternId: "content_like_entity"
+    semanticType: "content_like"
+    matchKeywords:
+      - "内容"
+      - "文章"
+      - "帖子"
+      - "评论"
+      - "消息"
+      - "信息"
+    tableNamePatterns:
+      - ".*content.*"
+      - ".*article.*"
+      - ".*post.*"
+      - ".*comment.*"
+      - ".*message.*"
+      - ".*info.*"
+    fieldSemanticMapping:
+      id_field: "id"
+      title_field: "title|subject|name"
+      content_field: "content|body|text|description"
+      author_field: "author_id|user_id|creator_id"
+      status_field: "status|state|is_published"
+      time_field: "created_at|create_time|publish_time"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.75
+    supportedDbTypes:
+      - "mysql"
+      - "postgresql"
+      - "sqlite"
+
+  # 订单类实体模式
+  - patternId: "order_like_entity"
+    semanticType: "order_like"
+    matchKeywords:
+      - "订单"
+      - "交易"
+      - "支付"
+      - "购买"
+      - "消费"
+    tableNamePatterns:
+      - ".*order.*"
+      - ".*transaction.*"
+      - ".*payment.*"
+      - ".*purchase.*"
+    fieldSemanticMapping:
+      id_field: "id|order_id"
+      user_field: "user_id|customer_id|buyer_id"
+      amount_field: "amount|price|total|money"
+      status_field: "status|state|order_status"
+      time_field: "created_at|create_time|order_time"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.7
+    supportedDbTypes:
+      - "mysql"
+      - "postgresql"
+      - "sqlite"
+
+# 关系语义模式
+relationshipSemanticPatterns:
+  # 用户-内容关系模式
+  - patternId: "user_content_relation"
+    sourceEntityType: "user_like"
+    targetEntityType: "content_like"
+    relationType: "ONE_TO_MANY"
+    relationStrength: 0.9
+    joinConditionTemplate: "{source_alias}.id = {target_alias}.{author_field}"
+    fieldMappingPatterns:
+      author_field: "author_id|user_id|creator_id"
+    triggerKeywords:
+      - "关联"
+      - "对应"
+      - "作者"
+      - "创建者"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.8
+
+  # 用户-订单关系模式
+  - patternId: "user_order_relation"
+    sourceEntityType: "user_like"
+    targetEntityType: "order_like"
+    relationType: "ONE_TO_MANY"
+    relationStrength: 0.95
+    joinConditionTemplate: "{source_alias}.id = {target_alias}.{user_field}"
+    fieldMappingPatterns:
+      user_field: "user_id|customer_id|buyer_id"
+    triggerKeywords:
+      - "购买"
+      - "订单"
+      - "消费"
+      - "客户"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.85
+
+# 函数语义模式
+functionSemanticPatterns:
+  # 计数聚合函数
+  - patternId: "count_aggregate"
+    semanticType: "AGGREGATE"
+    triggerKeywords:
+      - "数量"
+      - "多少"
+      - "计数"
+      - "统计"
+      - "总数"
+    functionTemplate: "COUNT({field_full})"
+    applicableEntityTypes: []
+    requiredFieldTypes: []
+    parameterMapping:
+      field: "*"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.9
+    supportedDbTypes:
+      - "mysql"
+      - "postgresql"
+      - "sqlite"
+
+  # 求和聚合函数
+  - patternId: "sum_aggregate"
+    semanticType: "AGGREGATE"
+    triggerKeywords:
+      - "总和"
+      - "合计"
+      - "求和"
+      - "总计"
+    functionTemplate: "SUM({field_full})"
+    applicableEntityTypes: []
+    requiredFieldTypes:
+      - "int"
+      - "decimal"
+      - "float"
+      - "double"
+      - "numeric"
+    parameterMapping: {}
+    usageCount: 0
+    successCount: 0
+    confidence: 0.85
+    supportedDbTypes:
+      - "mysql"
+      - "postgresql"
+      - "sqlite"
+
+  # 平均值聚合函数
+  - patternId: "avg_aggregate"
+    semanticType: "AGGREGATE"
+    triggerKeywords:
+      - "平均"
+      - "平均值"
+      - "均值"
+    functionTemplate: "AVG({field_full})"
+    applicableEntityTypes: []
+    requiredFieldTypes:
+      - "int"
+      - "decimal"
+      - "float"
+      - "double"
+      - "numeric"
+    parameterMapping: {}
+    usageCount: 0
+    successCount: 0
+    confidence: 0.8
+    supportedDbTypes:
+      - "mysql"
+      - "postgresql"
+      - "sqlite"
+
+  # 日期格式化函数
+  - patternId: "date_format"
+    semanticType: "DATETIME"
+    triggerKeywords:
+      - "日期"
+      - "时间"
+      - "格式化"
+      - "年月日"
+    functionTemplate: "DATE_FORMAT({field_full}, '{date_format}')"
+    applicableEntityTypes: []
+    requiredFieldTypes:
+      - "date"
+      - "datetime"
+      - "timestamp"
+    parameterMapping:
+      date_format: "%Y-%m-%d"
+    usageCount: 0
+    successCount: 0
+    confidence: 0.75
+    supportedDbTypes:
+      - "mysql"
+
+# 学习历史记录
+learningHistory:
+  totalQueries: 0
+  positiveFeedback: 0
+  negativeFeedback: 0
+  corrections: 0
+  lastCleanupTime: null
+  patternEvolution: []
+
+# 配置元数据
+metadata:
+  version: "1.0.0"
+  lastUpdated: null
+  description: "泛化SQL模式学习配置，支持跨数据库的自然语言到SQL转换"
+  author: "Text2SQL-MCP"

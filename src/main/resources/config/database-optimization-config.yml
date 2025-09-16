@@ -1,0 +1,271 @@
+# 数据库特定优化配置
+# Database-Specific Optimization Configuration
+
+metadata:
+  version: "2.0.0"
+  description: "针对不同数据库类型的优化配置，提供特定的性能优化策略"
+  readonly: true
+  maintainer: "SpringAI-MCP System"
+  lastReview: "2025-09-12"
+
+# MySQL 优化配置
+mysqlOptimization:
+  
+  # 查询优化策略
+  queryOptimizationStrategies:
+    
+    # 索引优化建议
+    indexOptimization:
+      - strategy: "primary_key_clustering"
+        description: "利用主键聚簇索引特性"
+        applicableScenarios: ["range_queries", "order_by_id"]
+        sqlHints:
+          - "ORDER BY id 比 ORDER BY other_field 更高效"
+          - "WHERE id BETWEEN {start} AND {end} 使用聚簇索引"
+        examples:
+          - original: "SELECT * FROM users ORDER BY created_at DESC LIMIT 10"
+            optimized: "SELECT * FROM users ORDER BY id DESC LIMIT 10"
+            improvement: "使用主键排序，避免filesort"
+      
+      - strategy: "composite_index_usage"
+        description: "复合索引的左前缀匹配"
+        applicableScenarios: ["multi_column_where", "complex_filtering"]
+        sqlHints:
+          - "WHERE a=? AND b=? 可以使用索引(a,b)"
+          - "WHERE a=? AND b=? AND c=? 可以使用索引(a,b,c)"
+          - "WHERE b=? 无法使用索引(a,b)"
+        indexSuggestions:
+          user_queries: "CREATE INDEX idx_user_status_created ON users(status, created_at)"
+          content_queries: "CREATE INDEX idx_content_category_published ON articles(category_id, published_at)"
+          order_queries: "CREATE INDEX idx_order_user_status_created ON orders(user_id, status, created_at)"
+    
+    # JOIN 优化策略
+    joinOptimization:
+      - strategy: "driving_table_selection"
+        description: "选择合适的驱动表"
+        rules:
+          - "小表驱动大表"
+          - "有索引的表作为被驱动表"
+          - "过滤条件多的表作为驱动表"
+        examples:
+          - scenario: "用户表(1万) JOIN 订单表(100万)"
+            recommended: "SELECT * FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.status = 1"
+            reason: "用户表较小，作为驱动表更高效"
+      
+      - strategy: "join_type_selection"
+        description: "选择合适的JOIN类型"
+        guidelines:
+          inner_join: "需要两表都有匹配数据时使用"
+          left_join: "需要保留左表所有记录时使用"
+          exists: "只需要判断存在性时，比JOIN更高效"
+        examples:
+          - original: "SELECT DISTINCT u.* FROM users u JOIN orders o ON u.id = o.user_id"
+            optimized: "SELECT u.* FROM users u WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id)"
+            improvement: "EXISTS 避免了DISTINCT操作"
+    
+    # 分页优化策略
+    paginationOptimization:
+      - strategy: "offset_limit_optimization"
+        description: "大偏移量分页优化"
+        problems:
+          - "LIMIT 100000, 20 需要跳过10万条记录"
+          - "偏移量越大，性能越差"
+        solutions:
+          cursor_based: "基于游标的分页"
+          seek_method: "基于条件的分页"
+        examples:
+          - original: "SELECT * FROM articles ORDER BY id DESC LIMIT 10000, 20"
+            optimized: "SELECT * FROM articles WHERE id < {last_id} ORDER BY id DESC LIMIT 20"
+            improvement: "避免大偏移量，使用条件过滤"
+      
+      - strategy: "count_optimization"
+        description: "总数统计优化"
+        problems:
+          - "COUNT(*) 在大表上性能差"
+          - "分页时通常不需要精确总数"
+        solutions:
+          approximate_count: "使用近似统计"
+          cache_count: "缓存统计结果"
+          pagination_without_count: "无总数分页"
+        examples:
+          - original: "SELECT COUNT(*) FROM orders WHERE status = 1"
+            optimized: "SELECT table_rows FROM information_schema.tables WHERE table_name = 'orders'"
+            improvement: "使用统计信息，快速估算"
+
+  # 特定函数优化
+  functionOptimization:
+    
+    # 日期时间函数
+    dateTimeFunctions:
+      - function: "DATE_SUB, DATE_ADD"
+        description: "日期计算函数"
+        optimizationTips:
+          - "预计算常用时间点，避免重复计算"
+          - "使用具体日期范围替代函数计算"
+        examples:
+          - original: "WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+            optimized: "WHERE created_at >= '2025-09-05 00:00:00'"
+            improvement: "避免每行都执行日期函数"
+      
+      - function: "DATE_FORMAT"
+        description: "日期格式化函数"
+        optimizationTips:
+          - "在应用层处理格式化，而非数据库层"
+          - "GROUP BY 时避免使用格式化函数"
+        examples:
+          - original: "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) FROM orders GROUP BY month"
+            optimized: "SELECT YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) FROM orders GROUP BY year, month"
+            improvement: "使用数值分组，性能更好"
+    
+    # 字符串函数
+    stringFunctions:
+      - function: "LIKE"
+        description: "模糊匹配函数"
+        optimizationTips:
+          - "避免前导通配符 LIKE '%keyword'"
+          - "使用全文索引 MATCH AGAINST"
+          - "考虑使用 LOCATE 或 INSTR"
+        examples:
+          - original: "WHERE title LIKE '%关键词%'"
+            optimized: "WHERE MATCH(title, content) AGAINST('关键词' IN NATURAL LANGUAGE MODE)"
+            improvement: "全文索引搜索性能更优"
+
+  # 数据类型优化建议
+  dataTypeOptimization:
+    - dataType: "VARCHAR"
+      optimizationTips:
+        - "根据实际需要设定长度，避免过长"
+        - "VARCHAR(255) vs TEXT 的选择要慎重"
+        - "索引字段考虑使用较短的VARCHAR"
+      bestPractices:
+        - "用户名: VARCHAR(50)"
+        - "邮箱: VARCHAR(100)"
+        - "手机号: VARCHAR(20)"
+        - "标题: VARCHAR(200)"
+    
+    - dataType: "TEXT"
+      optimizationTips:
+        - "避免在 TEXT 字段上建索引"
+        - "SELECT 时尽量不要包含 TEXT 字段"
+        - "考虑将 TEXT 字段分离到单独表"
+      bestPractices:
+        - "文章内容独立表存储"
+        - "只在需要时关联查询"
+    
+    - dataType: "DATETIME vs TIMESTAMP"
+      optimizationTips:
+        - "TIMESTAMP 存储空间更小"
+        - "DATETIME 范围更广，不受时区影响"
+        - "高频查询字段建议用 TIMESTAMP"
+      bestPractices:
+        - "创建时间: TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        - "更新时间: TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+
+# 查询模式优化模板
+queryPatternOptimization:
+  
+  # 统计查询优化
+  statisticsQueries:
+    - pattern: "daily_statistics"
+      description: "日统计查询优化"
+      originalTemplate: "SELECT DATE(created_at) as date, COUNT(*) as count FROM {table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY DATE(created_at)"
+      optimizedTemplate: "SELECT DATE(created_at) as date, COUNT(*) as count FROM {table} WHERE created_at >= '{start_date}' AND created_at < '{end_date}' GROUP BY DATE(created_at)"
+      optimizations:
+        - "使用具体日期范围替代函数"
+        - "在 created_at 字段上建立索引"
+        - "考虑建立按日期分区"
+    
+    - pattern: "top_n_queries"
+      description: "TopN 查询优化"
+      originalTemplate: "SELECT *, (SELECT COUNT(*) FROM interactions WHERE content_id = c.id) as interaction_count FROM contents c ORDER BY interaction_count DESC LIMIT 10"
+      optimizedTemplate: "SELECT c.*, i.interaction_count FROM contents c JOIN (SELECT content_id, COUNT(*) as interaction_count FROM interactions GROUP BY content_id ORDER BY interaction_count DESC LIMIT 10) i ON c.id = i.content_id"
+      optimizations:
+        - "避免子查询，使用JOIN"
+        - "在关联字段上建立索引"
+        - "考虑使用缓存存储热门内容"
+
+  # 复杂查询优化
+  complexQueries:
+    - pattern: "multi_table_aggregation"
+      description: "多表聚合查询优化"
+      optimizationStrategies:
+        - "分步查询，避免复杂JOIN"
+        - "使用临时表存储中间结果"
+        - "考虑数据预计算和缓存"
+      examples:
+        - scenario: "用户发布文章数量统计"
+          optimized: "CREATE TEMPORARY TABLE user_article_stats AS SELECT user_id, COUNT(*) as article_count FROM articles WHERE status = 1 GROUP BY user_id"
+
+# 索引建议模板
+indexSuggestionTemplates:
+  
+  # 基础索引模板
+  basicIndexes:
+    - indexType: "single_column"
+      template: "CREATE INDEX idx_{table}_{column} ON {table}({column})"
+      applicableFields: ["status", "type", "category_id", "user_id"]
+    
+    - indexType: "composite_index"
+      template: "CREATE INDEX idx_{table}_{col1}_{col2} ON {table}({col1}, {col2})"
+      usagePatterns: ["WHERE col1=? AND col2=?", "ORDER BY col1, col2"]
+    
+    - indexType: "covering_index"
+      template: "CREATE INDEX idx_{table}_{where_cols}_covering_{select_cols} ON {table}({where_cols}) INCLUDE ({select_cols})"
+      benefit: "避免回表查询，提高查询效率"
+
+  # 业务场景索引
+  businessScenarioIndexes:
+    - scenario: "用户登录查询"
+      indexDefinition: "CREATE INDEX idx_users_email_status ON users(email, status)"
+      queryPattern: "WHERE email = ? AND status = 1"
+    
+    - scenario: "文章列表查询"
+      indexDefinition: "CREATE INDEX idx_articles_status_published_created ON articles(status, published_at, created_at)"
+      queryPattern: "WHERE status = 1 ORDER BY published_at DESC"
+    
+    - scenario: "订单查询"
+      indexDefinition: "CREATE INDEX idx_orders_user_status_created ON orders(user_id, status, created_at)"
+      queryPattern: "WHERE user_id = ? AND status IN (1,2,3) ORDER BY created_at DESC"
+
+# 性能监控配置
+performanceMonitoring:
+  
+  # 慢查询阈值
+  slowQueryThresholds:
+    warning: "0.5s"  # 警告阈值
+    critical: "2.0s"  # 严重阈值
+    
+  # 关键指标监控
+  keyMetrics:
+    - metric: "query_execution_time"
+      description: "查询执行时间"
+      threshold: "< 1s"
+    
+    - metric: "index_usage"
+      description: "索引使用情况"
+      threshold: "> 80%"
+    
+    - metric: "table_scan_ratio"
+      description: "全表扫描比例"
+      threshold: "< 10%"
+
+# 自动优化建议生成器
+autoOptimizationSuggestions:
+  
+  # 规则引擎
+  rules:
+    - ruleId: "missing_index_detection"
+      condition: "WHERE 条件中的字段缺少索引"
+      suggestion: "建议在 {field} 字段上创建索引"
+      
+    - ruleId: "unused_index_detection"
+      condition: "索引从未被使用"
+      suggestion: "考虑删除未使用的索引 {index_name}"
+      
+    - ruleId: "large_offset_detection"
+      condition: "LIMIT 偏移量 > 10000"
+      suggestion: "建议使用基于游标的分页方式"
+      
+    - ruleId: "select_star_detection"
+      condition: "使用 SELECT *"
+      suggestion: "建议明确指定需要的字段"

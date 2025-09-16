@@ -1,0 +1,145 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+# Build directories
+build/
+target/
+out/
+bin/
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+.gradletasknamecache
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse
+.settings/
+.classpath
+.project
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Application specific
+application-local.properties
+application-local.yml
+application-local.yaml
+
+# Secrets and API Keys
+*.key
+*.pem
+*.p12
+*.jks
+secrets/
+credentials/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Node modules (if frontend is included)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Spring Boot
+spring-boot-*.log
+.reloadtrigger
+
+# Cache directories
+.cache/
+cache/
+
+# Testing
+test-output/
+test-results/
+coverage/
+*.exec
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version

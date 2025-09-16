@@ -1,0 +1,19 @@
+---
+entitySemanticPatterns:
+- patternId: null
+  semanticType: "user_like"
+  matchKeywords:
+  - "用户"
+  - "账号"
+  - "会员"
+  - "个人"
+  tableNamePatterns:
+  - ".*user.*"
+  - ".*account.*"
+  - ".*member.*"
+  fieldSemanticMapping: null
+  usageCount: 0
+  successCount: 0
+  confidence: 0.8
+  supportedDbTypes: null
+  successRate: 0.0

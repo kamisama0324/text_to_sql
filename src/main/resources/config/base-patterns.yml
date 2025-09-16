@@ -1,0 +1,229 @@
+# 基础SQL模式配置 (只读，不被用户反馈修改)
+# Base SQL Patterns Configuration (Read-only, not modified by user feedback)
+
+# 配置元信息
+metadata:
+  version: "1.0.0"
+  description: "系统基础SQL模式，提供稳定的查询生成基线"
+  readonly: true
+  maintainer: "SpringAI-MCP System"
+  lastReview: "2025-09-11"
+
+# 基础泛化SQL模式
+basePatterns:
+  
+  # 1. 基础实体查询模式
+  - patternId: "base_entity_detail_query"
+    patternName: "基础实体详细查询"
+    intentSemantics: ["detail_query"]
+    entityTypes: ["user_like", "content_like", "order_like"]
+    applicableScenarios: ["single_table_query", "basic_detail_retrieval"]
+    generalConfidence: 0.9
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT * FROM {primary_entity}"
+      fromTemplate: ""
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1"
+      orderTemplate: "ORDER BY {primary_entity}.{time_field} DESC"
+      limitTemplate: "LIMIT 100"
+      placeholderRules:
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_valid", "status", "enabled", "is_active"]
+          fallback: "1=1"
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "create_time"]
+          fallback: "id"
+    description: "查询单个实体表的所有记录，带基础状态过滤"
+    examples:
+      - "查询所有用户信息"
+      - "显示所有文章内容"
+      - "列出所有订单"
+
+  # 2. 基础关联查询模式
+  - patternId: "base_entity_association"
+    patternName: "基础实体关联查询"
+    intentSemantics: ["entity_association", "detail_query"]
+    entityTypes: ["user_like", "content_like"]
+    applicableScenarios: ["two_table_join", "basic_association"]
+    generalConfidence: 0.85
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT a.*, b.* FROM {primary_entity} a"
+      fromTemplate: ""
+      joinTemplate: "LEFT JOIN {secondary_entity} b ON a.{id_field} = b.{foreign_key_field}"
+      whereTemplate: "WHERE a.{status_field} = 1"
+      orderTemplate: "ORDER BY a.{time_field} DESC"
+      limitTemplate: "LIMIT 100"
+      placeholderRules:
+        id_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id", "pk_id", "primary_id"]
+          fallback: "id"
+        foreign_key_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["user_id", "content_id", "parent_id"]
+          fallback: "id"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_valid", "status", "enabled"]
+          fallback: "1=1"
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at"]
+          fallback: "id"
+    description: "两个表的基础LEFT JOIN查询"
+    examples:
+      - "查询用户信息和对应的文章"
+      - "显示订单和相关的用户信息"
+
+  # 3. 基础计数统计模式
+  - patternId: "base_count_statistics"
+    patternName: "基础计数统计"
+    intentSemantics: ["count_statistics", "aggregation"]
+    entityTypes: ["countable_entity", "user_like", "content_like"]
+    applicableScenarios: ["simple_count", "group_statistics"]
+    generalConfidence: 0.9
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT COUNT(*) as total_count FROM {primary_entity}"
+      fromTemplate: ""
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1"
+      orderTemplate: ""
+      limitTemplate: ""
+      placeholderRules:
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_valid", "status", "enabled"]
+          fallback: "1=1"
+    description: "基础的记录数量统计"
+    examples:
+      - "统计用户总数"
+      - "计算文章数量"
+      - "统计订单总数"
+
+  # 4. 基础分组统计模式
+  - patternId: "base_group_statistics"
+    patternName: "基础分组统计"
+    intentSemantics: ["count_statistics", "aggregation"]
+    entityTypes: ["countable_entity"]
+    applicableScenarios: ["group_by_query", "category_statistics"]
+    generalConfidence: 0.8
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT {group_field}, COUNT(*) as count FROM {primary_entity}"
+      fromTemplate: ""
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1"
+      orderTemplate: "GROUP BY {group_field} ORDER BY count DESC"
+      limitTemplate: "LIMIT 50"
+      placeholderRules:
+        group_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["type", "category", "status", "department"]
+          fallback: "type"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_valid", "status", "enabled"]
+          fallback: "1=1"
+    description: "按字段分组的计数统计"
+    examples:
+      - "统计各类型的文章数量"
+      - "按部门统计员工数量"
+
+  # 5. 基础时间范围查询模式
+  - patternId: "base_time_range_query"
+    patternName: "基础时间范围查询"
+    intentSemantics: ["filter_query", "time_range"]
+    entityTypes: ["time_sensitive_entity", "user_like", "content_like"]
+    applicableScenarios: ["recent_data", "time_filter"]
+    generalConfidence: 0.85
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT * FROM {primary_entity}"
+      fromTemplate: ""
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{time_field} >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+      orderTemplate: "ORDER BY {primary_entity}.{time_field} DESC"
+      limitTemplate: "LIMIT 100"
+      placeholderRules:
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "publish_time"]
+          fallback: "created_at"
+    description: "查询最近7天的数据"
+    examples:
+      - "查询最近一周的文章"
+      - "显示最近注册的用户"
+
+# 基础语义实体模式
+baseEntitySemantics:
+  - semanticType: "user_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords: ["用户", "会员", "账号", "账户", "客户"]
+    tableNamePatterns: [".*user.*", ".*member.*", ".*account.*", ".*customer.*"]
+    commonFields: ["id", "username", "email", "created_at", "status"]
+    description: "用户类实体的基础语义模式"
+
+  - semanticType: "content_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords: ["文章", "内容", "帖子", "新闻", "博客"]
+    tableNamePatterns: [".*article.*", ".*post.*", ".*content.*", ".*news.*"]
+    commonFields: ["id", "title", "content", "author_id", "created_at"]
+    description: "内容类实体的基础语义模式"
+
+  - semanticType: "order_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords: ["订单", "交易", "支付", "购买"]
+    tableNamePatterns: [".*order.*", ".*transaction.*", ".*payment.*"]
+    commonFields: ["id", "user_id", "amount", "status", "created_at"]
+    description: "订单类实体的基础语义模式"
+
+# 基础关系语义模式
+baseRelationshipSemantics:
+  - relationType: "user_content_relation"
+    confidence: 1.0
+    readonly: true
+    sourceEntityType: "user_like"
+    targetEntityType: "content_like"
+    relationshipPattern: "user_id"
+    joinCondition: "{source_table}.id = {target_table}.user_id"
+    description: "用户与内容的基础关联关系"
+
+  - relationType: "user_order_relation"
+    confidence: 1.0
+    readonly: true
+    sourceEntityType: "user_like"
+    targetEntityType: "order_like"
+    relationshipPattern: "user_id"
+    joinCondition: "{source_table}.id = {target_table}.user_id"
+    description: "用户与订单的基础关联关系"
+
+# 基础功能语义模式
+baseFunctionSemantics:
+  - functionType: "COUNT"
+    confidence: 1.0
+    readonly: true
+    triggerKeywords: ["数量", "总数", "多少", "统计", "计数"]
+    sqlFunction: "COUNT(*)"
+    description: "计数功能的基础语义"
+
+  - functionType: "SUM"
+    confidence: 1.0
+    readonly: true
+    triggerKeywords: ["总和", "合计", "总计", "求和"]
+    sqlFunction: "SUM({field})"
+    description: "求和功能的基础语义"
+
+  - functionType: "AVG"
+    confidence: 1.0
+    readonly: true
+    triggerKeywords: ["平均", "均值", "平均数"]
+    sqlFunction: "AVG({field})"
+    description: "平均值功能的基础语义"

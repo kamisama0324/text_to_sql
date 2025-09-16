@@ -1,0 +1,430 @@
+# 增强的基础SQL模式配置
+# Enhanced Base SQL Patterns Configuration
+
+metadata:
+  version: "2.0.0"
+  description: "增强的系统基础SQL模式，覆盖更多查询场景，提升生成质量"
+  readonly: true
+  maintainer: "SpringAI-MCP System"
+  lastReview: "2025-09-12"
+
+# 增强的基础泛化SQL模式
+enhancedBasePatterns:
+
+  # === 基础查询模式（已有的优化版） ===
+  
+  # 1. 智能分页查询模式
+  - patternId: "base_pagination_query"
+    patternName: "智能分页查询"
+    intentSemantics: ["list_query", "pagination"]
+    entityTypes: ["user_like", "content_like", "order_like", "log_like"]
+    applicableScenarios: ["data_browsing", "list_display", "table_pagination"]
+    generalConfidence: 0.92
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT * FROM {primary_entity}"
+      fromTemplate: ""
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1"
+      orderTemplate: "ORDER BY {primary_entity}.{time_field} DESC"
+      limitTemplate: "LIMIT {offset}, {page_size}"
+      placeholderRules:
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "enabled = 1", "is_active = 1", "valid = 1"]
+          fallback: "1=1"
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "create_time", "update_time", "publish_time"]
+          fallback: "id"
+        offset:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["0", "20", "40"]
+          fallback: "0"
+        page_size:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["20", "50", "100"]
+          fallback: "20"
+    description: "支持偏移量的智能分页查询，自动处理软删除"
+    examples:
+      - "分页显示用户列表"
+      - "查看文章第2页"
+      - "显示最近的订单记录"
+
+  # 2. 高级关联查询模式
+  - patternId: "base_advanced_association"
+    patternName: "高级多表关联查询"
+    intentSemantics: ["complex_query", "multi_table_join"]
+    entityTypes: ["user_like", "content_like", "order_like"]
+    applicableScenarios: ["complex_join", "data_aggregation", "business_reporting"]
+    generalConfidence: 0.88
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT a.{primary_fields}, b.{secondary_fields}, c.{tertiary_fields}"
+      fromTemplate: "FROM {primary_entity} a"
+      joinTemplate: "LEFT JOIN {secondary_entity} b ON a.{primary_key} = b.{foreign_key1} LEFT JOIN {tertiary_entity} c ON b.{secondary_key} = c.{foreign_key2}"
+      whereTemplate: "WHERE a.{status_field} = 1 AND b.{status_field} = 1"
+      orderTemplate: "ORDER BY a.{time_field} DESC"
+      limitTemplate: "LIMIT 100"
+      placeholderRules:
+        primary_fields:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id, name, email, created_at", "id, title, content, author_id", "*"]
+          fallback: "*"
+        secondary_fields:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id, name, type", "id, title, status", "*"]
+          fallback: "*"
+        tertiary_fields:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id, name", "id, title", "*"]
+          fallback: "*"
+        primary_key:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id", "user_id", "primary_id"]
+          fallback: "id"
+        foreign_key1:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["user_id", "author_id", "parent_id", "owner_id"]
+          fallback: "user_id"
+        secondary_key:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id", "category_id", "type_id"]
+          fallback: "id"
+        foreign_key2:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["category_id", "type_id", "parent_id"]
+          fallback: "category_id"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "enabled = 1"]
+          fallback: "1=1"
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "publish_time"]
+          fallback: "id"
+    description: "三表关联查询，支持复杂业务场景"
+    examples:
+      - "查询用户及其发布的文章和文章分类"
+      - "显示订单、用户信息和商品详情"
+      - "获取员工、部门和职位信息"
+
+  # 3. 智能搜索查询模式
+  - patternId: "base_intelligent_search"
+    patternName: "智能搜索查询"
+    intentSemantics: ["search_query", "fuzzy_match", "full_text_search"]
+    entityTypes: ["content_like", "searchable_entity", "user_like"]
+    applicableScenarios: ["content_search", "user_search", "product_search"]
+    generalConfidence: 0.85
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT *, MATCH({search_fields}) AGAINST('{search_term}' IN NATURAL LANGUAGE MODE) as relevance_score"
+      fromTemplate: "FROM {primary_entity}"
+      joinTemplate: ""
+      whereTemplate: "WHERE ({primary_entity}.{status_field} = 1) AND (MATCH({search_fields}) AGAINST('{search_term}' IN NATURAL LANGUAGE MODE) OR {search_fields} LIKE '%{search_term}%')"
+      orderTemplate: "ORDER BY relevance_score DESC, {time_field} DESC"
+      limitTemplate: "LIMIT 50"
+      placeholderRules:
+        search_fields:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["title, content", "name, description", "title, summary", "name, email"]
+          fallback: "title"
+        search_term:
+          ruleType: "USER_INPUT"
+          patterns: []
+          fallback: "keyword"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "published = 1"]
+          fallback: "1=1"
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "publish_time"]
+          fallback: "created_at"
+    description: "全文搜索结合LIKE模糊匹配，带相关性评分"
+    examples:
+      - "搜索包含关键词的文章"
+      - "查找用户名包含某字符串的用户"
+      - "搜索商品名称或描述"
+
+  # 4. 高级统计分析模式
+  - patternId: "base_advanced_statistics"
+    patternName: "高级统计分析查询"
+    intentSemantics: ["statistics", "analytics", "aggregation", "trending"]
+    entityTypes: ["statistical_entity", "content_like", "order_like", "user_like"]
+    applicableScenarios: ["business_analytics", "reporting", "dashboard"]
+    generalConfidence: 0.87
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT {group_fields}, COUNT(*) as count, SUM({sum_field}) as total, AVG({avg_field}) as average, MAX({time_field}) as latest"
+      fromTemplate: "FROM {primary_entity}"
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1 AND {primary_entity}.{time_field} >= DATE_SUB(NOW(), INTERVAL {time_range} DAY)"
+      orderTemplate: "GROUP BY {group_fields} ORDER BY count DESC"
+      limitTemplate: "LIMIT 20"
+      placeholderRules:
+        group_fields:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["DATE(created_at)", "status", "type", "category", "YEAR(created_at), MONTH(created_at)"]
+          fallback: "DATE(created_at)"
+        sum_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["amount", "price", "quantity", "score", "1"]
+          fallback: "1"
+        avg_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["amount", "price", "score", "rating", "1"]
+          fallback: "1"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "enabled = 1"]
+          fallback: "1=1"
+        time_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "order_time", "publish_time"]
+          fallback: "created_at"
+        time_range:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["7", "30", "90", "365"]
+          fallback: "30"
+    description: "多维度统计分析，支持时间范围过滤"
+    examples:
+      - "统计最近30天每日订单数量和总额"
+      - "按分类统计文章数量和平均评分"
+      - "分析用户注册趋势"
+
+  # 5. 条件筛选查询模式  
+  - patternId: "base_conditional_filter"
+    patternName: "多条件筛选查询"
+    intentSemantics: ["filter_query", "condition_match", "criteria_search"]
+    entityTypes: ["filterable_entity", "user_like", "content_like", "order_like"]
+    applicableScenarios: ["advanced_filter", "criteria_based_search", "condition_matching"]
+    generalConfidence: 0.89
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT * FROM {primary_entity}"
+      fromTemplate: ""
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1 AND {filter_conditions}"
+      orderTemplate: "ORDER BY {primary_entity}.{sort_field} {sort_order}"
+      limitTemplate: "LIMIT 100"
+      placeholderRules:
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "enabled = 1", "active = 1"]
+          fallback: "1=1"
+        filter_conditions:
+          ruleType: "DYNAMIC_CONDITIONS"
+          patterns: [
+            "{field1} = '{value1}'",
+            "{field1} IN ({value_list})",
+            "{field1} BETWEEN '{start_value}' AND '{end_value}'",
+            "{field1} > '{threshold_value}'",
+            "{date_field} >= '{start_date}' AND {date_field} <= '{end_date}'"
+          ]
+          fallback: "1=1"
+        sort_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "name", "title", "score", "priority"]
+          fallback: "created_at"
+        sort_order:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["DESC", "ASC"]
+          fallback: "DESC"
+    description: "支持多种条件类型的灵活筛选查询"
+    examples:
+      - "筛选特定状态和时间范围的订单"
+      - "查找满足多个条件的用户"
+      - "按条件过滤文章列表"
+
+  # 6. 排行榜查询模式
+  - patternId: "base_ranking_query"
+    patternName: "排行榜查询"
+    intentSemantics: ["ranking", "top_n", "leaderboard", "best_worst"]
+    entityTypes: ["rankable_entity", "user_like", "content_like", "product_like"]
+    applicableScenarios: ["leaderboard", "top_performers", "popularity_ranking"]
+    generalConfidence: 0.91
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT *, ROW_NUMBER() OVER (ORDER BY {ranking_field} {ranking_order}) as rank"
+      fromTemplate: "FROM {primary_entity}"
+      joinTemplate: ""
+      whereTemplate: "WHERE {primary_entity}.{status_field} = 1"
+      orderTemplate: "ORDER BY {ranking_field} {ranking_order}"
+      limitTemplate: "LIMIT {top_n}"
+      placeholderRules:
+        ranking_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["score", "rating", "view_count", "like_count", "sales_count", "amount"]
+          fallback: "created_at"
+        ranking_order:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["DESC", "ASC"]
+          fallback: "DESC"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "published = 1", "enabled = 1"]
+          fallback: "1=1"
+        top_n:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["10", "20", "50", "100"]
+          fallback: "10"
+    description: "生成排行榜查询，支持窗口函数排名"
+    examples:
+      - "查看评分最高的前10篇文章"
+      - "显示销量排行榜"
+      - "获取最活跃用户排名"
+
+# 增强的业务场景模式
+businessScenarioPatterns:
+
+  # 1. 用户活跃度分析
+  - patternId: "base_user_activity_analysis"
+    patternName: "用户活跃度分析"
+    intentSemantics: ["user_analytics", "activity_analysis", "engagement"]
+    entityTypes: ["user_like", "activity_like", "log_like"]
+    applicableScenarios: ["user_behavior_analysis", "engagement_metrics"]
+    generalConfidence: 0.86
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT u.id, u.name, COUNT(a.id) as activity_count, MAX(a.created_at) as last_activity, DATEDIFF(NOW(), MAX(a.created_at)) as days_since_last_activity"
+      fromTemplate: "FROM {user_table} u"
+      joinTemplate: "LEFT JOIN {activity_table} a ON u.id = a.user_id AND a.created_at >= DATE_SUB(NOW(), INTERVAL {time_period} DAY)"
+      whereTemplate: "WHERE u.{status_field} = 1"
+      orderTemplate: "GROUP BY u.id, u.name ORDER BY activity_count DESC, last_activity DESC"
+      limitTemplate: "LIMIT 50"
+      placeholderRules:
+        user_table:
+          ruleType: "TABLE_SELECTION"
+          patterns: ["users", "members", "accounts"]
+          fallback: "users"
+        activity_table:
+          ruleType: "TABLE_SELECTION"
+          patterns: ["user_activities", "activities", "logs", "actions"]
+          fallback: "activities"
+        time_period:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["7", "30", "90"]
+          fallback: "30"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "status = 1", "enabled = 1"]
+          fallback: "status = 1"
+    description: "分析用户在指定时间段内的活跃度"
+    examples:
+      - "分析用户最近30天的活跃情况"
+      - "查看用户参与度统计"
+      - "找出最活跃的用户"
+
+  # 2. 内容热度趋势
+  - patternId: "base_content_trending"
+    patternName: "内容热度趋势分析"
+    intentSemantics: ["trending", "popularity", "content_analytics", "viral_content"]
+    entityTypes: ["content_like", "interaction_like"]
+    applicableScenarios: ["content_recommendation", "trending_analysis"]
+    generalConfidence: 0.84
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT c.*, COUNT(i.id) as interaction_count, SUM(CASE WHEN i.type = 'like' THEN 1 ELSE 0 END) as like_count, SUM(CASE WHEN i.type = 'share' THEN 1 ELSE 0 END) as share_count"
+      fromTemplate: "FROM {content_table} c"
+      joinTemplate: "LEFT JOIN {interaction_table} i ON c.id = i.content_id AND i.created_at >= DATE_SUB(NOW(), INTERVAL {trending_period} DAY)"
+      whereTemplate: "WHERE c.{status_field} = 1 AND c.created_at >= DATE_SUB(NOW(), INTERVAL {content_age} DAY)"
+      orderTemplate: "GROUP BY c.id ORDER BY interaction_count DESC, like_count DESC"
+      limitTemplate: "LIMIT 20"
+      placeholderRules:
+        content_table:
+          ruleType: "TABLE_SELECTION"
+          patterns: ["articles", "posts", "contents", "news"]
+          fallback: "articles"
+        interaction_table:
+          ruleType: "TABLE_SELECTION"
+          patterns: ["interactions", "likes", "comments", "engagements"]
+          fallback: "interactions"
+        trending_period:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["1", "7", "30"]
+          fallback: "7"
+        content_age:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["30", "90", "180"]
+          fallback: "30"
+        status_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["is_deleted = 0", "published = 1", "status = 1"]
+          fallback: "published = 1"
+    description: "分析内容的热度和趋势，识别病毒式内容"
+    examples:
+      - "查看最近一周的热门文章"
+      - "分析内容互动趋势"
+      - "找出病毒式传播的内容"
+
+# 性能优化模式
+performanceOptimizedPatterns:
+
+  # 1. 索引优化查询模式
+  - patternId: "base_index_optimized_query"
+    patternName: "索引优化查询"
+    intentSemantics: ["optimized_query", "fast_query", "indexed_search"]
+    entityTypes: ["any_entity"]
+    applicableScenarios: ["high_performance_query", "large_dataset"]
+    generalConfidence: 0.93
+    readonly: true
+    sqlTemplate:
+      selectTemplate: "SELECT {optimized_fields}"
+      fromTemplate: "FROM {primary_entity} USE INDEX ({suggested_index})"
+      joinTemplate: ""
+      whereTemplate: "WHERE {indexed_conditions}"
+      orderTemplate: "ORDER BY {indexed_order_field}"
+      limitTemplate: "LIMIT {reasonable_limit}"
+      placeholderRules:
+        optimized_fields:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["id, name, created_at", "id, title, status, updated_at", "essential_columns_only"]
+          fallback: "id, name"
+        suggested_index:
+          ruleType: "INDEX_SUGGESTION"
+          patterns: ["idx_status_created", "idx_user_id_status", "idx_created_at"]
+          fallback: "PRIMARY"
+        indexed_conditions:
+          ruleType: "INDEXED_CONDITIONS"
+          patterns: [
+            "status = 1 AND created_at >= '{date}'",
+            "user_id = {user_id} AND status IN (1, 2)",
+            "type = '{type}' AND enabled = 1"
+          ]
+          fallback: "id > 0"
+        indexed_order_field:
+          ruleType: "FIELD_SELECTION"
+          patterns: ["created_at", "updated_at", "id", "sort_order"]
+          fallback: "id"
+        reasonable_limit:
+          ruleType: "DYNAMIC_VALUE"
+          patterns: ["20", "50", "100", "500"]
+          fallback: "100"
+    description: "专为性能优化设计的查询模式，强调索引使用"
+    examples:
+      - "高效查询大表数据"
+      - "使用索引加速搜索"
+      - "优化分页查询性能"
+
+# 字段类型语义增强
+fieldTypeSemantics:
+  - fieldPattern: ".*_id$"
+    semanticType: "identifier"
+    indexSuggestion: "btree_index"
+    optimizationHints: ["suitable_for_joins", "good_for_equality_search"]
+    
+  - fieldPattern: ".*(created_at|updated_at|time|date).*"
+    semanticType: "timestamp"
+    indexSuggestion: "btree_index"
+    optimizationHints: ["suitable_for_range_queries", "good_for_ordering"]
+    
+  - fieldPattern: ".*(name|title|description).*"
+    semanticType: "text_content"
+    indexSuggestion: "fulltext_index"
+    optimizationHints: ["suitable_for_search", "consider_fulltext_index"]
+    
+  - fieldPattern: ".*(status|type|category|level).*"
+    semanticType: "enumeration"
+    indexSuggestion: "btree_index"
+    optimizationHints: ["suitable_for_filtering", "low_cardinality"]

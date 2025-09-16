@@ -1,0 +1,91 @@
+# 学习历史配置文件
+# Learning History Configuration
+
+# 总体统计
+globalStats:
+  totalQueries: 0
+  totalFeedback: 0
+  positiveFeedback: 0
+  negativeFeedback: 0
+  corrections: 0
+  averageConfidence: 0.0
+  lastCleanupTime: null
+
+# 按数据库类型统计
+dbTypeStats:
+  mysql:
+    queries: 0
+    success: 0
+    failed: 0
+    avgConfidence: 0.0
+  postgresql:
+    queries: 0
+    success: 0
+    failed: 0
+    avgConfidence: 0.0
+  sqlite:
+    queries: 0
+    success: 0
+    failed: 0
+    avgConfidence: 0.0
+
+# 模式演进历史
+patternEvolution:
+  # 示例记录结构
+  # - timestamp: "2024-01-01T10:00:00Z"
+  #   patternId: "user_content_association"
+  #   action: "created|updated|improved"
+  #   confidence: 0.8
+  #   reason: "用户正反馈"
+  #   details: "用户确认生成的SQL正确"
+
+# 反馈历史 (最近100条)
+recentFeedback:
+  # 示例记录结构
+  # - timestamp: "2024-01-01T10:00:00Z"
+  #   query: "查询用户信息和对应的文章"
+  #   feedbackType: "POSITIVE|NEGATIVE|CORRECTION"
+  #   originalSql: "SELECT ..."
+  #   correctedSql: "SELECT ..." # 仅correction类型有此字段
+  #   patternUsed: "user_content_association"
+  #   confidence: 0.8
+
+# 查询模式统计
+queryPatternStats:
+  # 按语义意图统计
+  byIntent:
+    entity_association: 0
+    detail_query: 0
+    count_statistics: 0
+    filter_query: 0
+    time_range: 0
+    aggregation: 0
+  
+  # 按实体类型统计
+  byEntityType:
+    user_like: 0
+    content_like: 0
+    order_like: 0
+    time_sensitive_entity: 0
+    countable_entity: 0
+
+# 失败模式分析
+failurePatterns:
+  # 记录经常失败的查询模式，用于优化
+  commonFailures: []
+  # 示例结构:
+  # - pattern: "复杂多表关联查询"
+  #   count: 5
+  #   reasons:
+  #     - "JOIN条件错误"
+  #     - "字段映射不准确"
+  #   lastOccurrence: "2024-01-01T10:00:00Z"
+
+# 配置元数据
+metadata:
+  version: "1.0.0"
+  createdTime: null
+  lastUpdated: null
+  maxHistorySize: 1000
+  cleanupThreshold: 30 # 天数
+  description: "学习历史记录，用于追踪模式使用情况和系统改进"

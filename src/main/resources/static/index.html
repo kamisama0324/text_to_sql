@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2SQL AI - 智能数据库查询平台</title>
+    
+    <!-- 引入Vue.js和Element Plus -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="https://unpkg.com/@element-plus/icons-vue/dist/style.css">
+    
+    <!-- 引入字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 背景装饰 -->
+        <div class="background-decoration">
+            <div class="glow-orb glow-orb-1"></div>
+            <div class="glow-orb glow-orb-2"></div>
+            <div class="glow-orb glow-orb-3"></div>
+            <div class="grid-overlay"></div>
+        </div>
+
+        <!-- 顶部导航栏 -->
+        <nav class="top-navbar">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <div class="brand-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="brand-text">
+                        <h1>Text2SQL <span class="ai-badge">AI</span></h1>
+                        <p>智能数据库查询平台</p>
+                    </div>
+                </div>
+                
+                <div class="nav-status">
+                    <div class="connection-indicator" :class="{ active: connectionStatus }">
+                        <div class="indicator-dot"></div>
+                        <span>{{ connectionStatus ? '数据库已连接' : '数据库未连接' }}</span>
+                    </div>
+                    <button class="refresh-btn" @click="checkConnection" :disabled="checking">
+                        <i class="fas fa-sync-alt" :class="{ 'fa-spin': checking }"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主体内容区 -->
+        <main class="main-container">
+            <!-- 左侧面板 - 数据库结构 -->
+            <aside class="sidebar-panel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-database"></i> 数据库结构</h3>
+                    <button class="icon-btn" @click="loadSchema" :disabled="loadingSchema">
+                        <i class="fas fa-redo" :class="{ 'fa-spin': loadingSchema }"></i>
+                    </button>
+                </div>
+
+                <div class="database-badge" v-if="currentDatabase">
+                    <i class="fas fa-server"></i>
+                    <span>{{ currentDatabase }}</span>
+                </div>
+
+                <div class="schema-container">
+                    <div v-if="!schema.tables.length" class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-table"></i>
+                        </div>
+                        <h4>暂无数据库结构</h4>
+                        <p>点击刷新按钮加载数据库结构</p>
+                        <button class="primary-btn" @click="loadSchema">
+                            <i class="fas fa-download"></i>
+                            加载结构
+                        </button>
+                    </div>
+                    
+                    <div v-else class="schema-content">
+                        <div class="schema-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-table"></i>
+                                <span>{{ schema.tables.length }} 个表</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-columns"></i>
+                                <span>{{ schema.totalColumns || 0 }} 个字段</span>
+                            </div>
+                        </div>
+                        
+                        <div class="tables-list">
+                            <div v-for="table in schema.tables" :key="table.name" class="table-item">
+                                <div class="table-header" @click="toggleTable(table.name)">
+                                    <div class="table-info">
+                                        <i class="fas fa-table"></i>
+                                        <div>
+                                            <h4>{{ table.name }}</h4>
+                                            <p v-if="table.comment">{{ table.comment }}</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-chevron-down" :class="{ rotated: activeTableNames.includes(table.name) }"></i>
+                                </div>
+
+                                <div v-show="activeTableNames.includes(table.name)" class="table-content">
+                                    <div class="columns-grid">
+                                        <div 
+                                            v-for="column in table.columns" 
+                                            :key="column.name"
+                                            class="column-card"
+                                            @click="insertColumnName(table.name, column.name)">
+                                            
+                                            <div class="column-header">
+                                                <div class="column-name">
+                                                    <i class="fas fa-key" v-if="column.primaryKey"></i>
+                                                    <span>{{ column.name }}</span>
+                                                </div>
+                                                <div class="column-badges">
+                                                    <span class="badge badge-primary" v-if="column.primaryKey">PK</span>
+                                                    <span class="badge badge-warning" v-if="!column.nullable">NOT NULL</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="column-type">{{ column.displayType }}</div>
+                                            <div class="column-comment" v-if="column.comment">{{ column.comment }}</div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="table.foreignKeys && table.foreignKeys.length" class="foreign-keys-section">
+                                        <h5><i class="fas fa-link"></i> 关联关系</h5>
+                                        <div v-for="fk in table.foreignKeys" :key="fk.columnName" class="fk-item">
+                                            <i class="fas fa-arrow-right"></i>
+                                            <span>{{ fk.relationshipDescription }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 右侧主内容区 -->
+            <section class="content-panel">
+                <!-- 查询输入区域 -->
+                <div class="query-section">
+                    <div class="section-header">
+                        <div class="header-content">
+                            <h2><i class="fas fa-comments"></i> 自然语言查询</h2>
+                            <p>使用自然语言描述您的查询需求，AI将自动生成SQL语句</p>
+                        </div>
+                    </div>
+
+                    <div class="query-input-container">
+                        <div class="input-wrapper">
+                            <textarea 
+                                v-model="userQuery"
+                                class="query-textarea"
+                                placeholder="请输入您的查询需求...&#10;例如：查询所有用户信息、统计订单数量、查找今天的销售记录等"
+                                rows="4"></textarea>
+                        </div>
+
+                        <div class="action-buttons">
+                            <div class="primary-actions">
+                                <button class="action-btn primary" @click="convertToSql" :disabled="converting || executing">
+                                    <i class="fas fa-magic" :class="{ 'fa-spin': converting }"></i>
+                                    <span>生成SQL</span>
+                                </button>
+                                <button class="action-btn success" @click="queryAndExecute" :disabled="executing || converting">
+                                    <i class="fas fa-play" :class="{ 'fa-spin': executing }"></i>
+                                    <span>生成并执行</span>
+                                </button>
+                            </div>
+                            <button class="action-btn secondary" @click="clearAll">
+                                <i class="fas fa-eraser"></i>
+                                <span>清空</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 示例查询 -->
+                    <div class="examples-section">
+                        <h4><i class="fas fa-lightbulb"></i> 示例查询</h4>
+                        <div class="examples-grid">
+                            <div 
+                                v-for="example in exampleQueries" 
+                                :key="example"
+                                class="example-chip"
+                                @click="userQuery = example">
+                                <i class="fas fa-quote-left"></i>
+                                <span>{{ example }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 结果展示区域 -->
+                <div class="results-section" v-if="showResults">
+                    <div class="results-tabs">
+                        <div class="tab-buttons">
+                            <button 
+                                v-if="generatedSql"
+                                class="tab-btn" 
+                                :class="{ active: activeTab === 'sql' }"
+                                @click="activeTab = 'sql'">
+                                <i class="fas fa-code"></i>
+                                <span>生成的SQL</span>
+                            </button>
+                            <button 
+                                v-if="queryResults"
+                                class="tab-btn" 
+                                :class="{ active: activeTab === 'results' }"
+                                @click="activeTab = 'results'">
+                                <i class="fas fa-table"></i>
+                                <span>查询结果</span>
+                            </button>
+                            <button 
+                                v-if="rawResponse"
+                                class="tab-btn" 
+                                :class="{ active: activeTab === 'raw' }"
+                                @click="activeTab = 'raw'">
+                                <i class="fas fa-file-code"></i>
+                                <span>原始数据</span>
+                            </button>
+                        </div>
+
+                        <div class="tab-content">
+                            <!-- SQL标签页 -->
+                            <div v-if="activeTab === 'sql' && generatedSql" class="tab-panel">
+                                <div class="panel-header">
+                                    <h4><i class="fas fa-code"></i> 生成的SQL语句</h4>
+                                    <div class="header-actions">
+                                        <button class="icon-btn" @click="copySql" title="复制SQL">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                        <button class="icon-btn" @click="executeSql" :disabled="executing" title="执行SQL">
+                                            <i class="fas fa-play" :class="{ 'fa-spin': executing }"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="sql-display">
+                                    <pre class="sql-code"><code>{{ generatedSql }}</code></pre>
+                                </div>
+                                
+                                <!-- 用户反馈区域 -->
+                                <div class="sql-feedback-section">
+                                    <div class="feedback-header">
+                                        <i class="fas fa-thumbs-up"></i>
+                                        <h5>反馈学习</h5>
+                                        <span class="feedback-hint">您的反馈将帮助AI持续改进</span>
+                                    </div>
+                                    
+                                    <div class="feedback-actions" v-if="!feedbackSubmitted">
+                                        <button class="feedback-btn positive" @click="submitFeedback('correct')" :disabled="submittingFeedback">
+                                            <i class="fas fa-thumbs-up"></i>
+                                            <span>正确</span>
+                                        </button>
+                                        <button class="feedback-btn negative" @click="showFeedbackDialog('incorrect')" :disabled="submittingFeedback">
+                                            <i class="fas fa-thumbs-down"></i>
+                                            <span>不正确</span>
+                                        </button>
+                                        <button class="feedback-btn edit" @click="showFeedbackDialog('correction')" :disabled="submittingFeedback">
+                                            <i class="fas fa-edit"></i>
+                                            <span>需要修改</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="feedback-success" v-if="feedbackSubmitted">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>感谢您的反馈！AI正在学习中...</span>
+                                    </div>
+                                </div>
+
+                                <div class="sql-explanation" v-if="sqlExplanation">
+                                    <div class="explanation-header">
+                                        <i class="fas fa-info-circle"></i>
+                                        <h5>查询说明</h5>
+                                    </div>
+                                    <div class="explanation-content" v-html="formatExplanation(sqlExplanation)"></div>
+                                </div>
+                            </div>
+
+                            <!-- 结果标签页 -->
+                            <div v-if="activeTab === 'results' && queryResults" class="tab-panel">
+                                <div class="panel-header">
+                                    <h4><i class="fas fa-table"></i> 查询结果</h4>
+                                    <div class="result-badges">
+                                        <span class="badge badge-info">{{ queryResults.totalRows }} 行</span>
+                                        <span class="badge badge-success">{{ queryResults.executionTime }}ms</span>
+                                        <span class="badge badge-warning" v-if="queryResults.truncated">已截断</span>
+                                    </div>
+                                </div>
+
+                                <div v-if="queryResults.totalRows === 0" class="empty-results">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                    <h4>查询未返回任何数据</h4>
+                                    <p>请尝试调整查询条件</p>
+                                </div>
+
+                                <div v-else class="results-table-container">
+                                    <div class="table-wrapper">
+                                        <table class="results-table">
+                                            <thead>
+                                                <tr>
+                                                    <th v-for="column in queryResults.columns" :key="column">
+                                                        {{ column }}
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(row, index) in queryResults.rows" :key="index">
+                                                    <td v-for="(value, colIndex) in row" :key="colIndex">
+                                                        {{ formatCellValue(value) }}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 原始数据标签页 -->
+                            <div v-if="activeTab === 'raw' && rawResponse" class="tab-panel">
+                                <div class="panel-header">
+                                    <h4><i class="fas fa-file-code"></i> 原始响应数据</h4>
+                                </div>
+                                <div class="raw-data-display">
+                                    <pre class="raw-code"><code>{{ JSON.stringify(rawResponse, null, 2) }}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 浮动操作按钮 -->
+        <div class="floating-actions">
+            <button class="fab" @click="scrollToTop" title="返回顶部">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+        </div>
+
+        <!-- 反馈对话框 -->
+        <div class="feedback-modal-overlay" v-if="showFeedbackModal" @click.self="closeFeedbackDialog">
+            <div class="feedback-modal">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-comment-dots"></i>
+                        {{ feedbackType === 'correction' ? 'SQL修正' : '问题反馈' }}
+                    </h3>
+                    <button class="close-btn" @click="closeFeedbackDialog">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-content">
+                    <!-- 原始查询显示 -->
+                    <div class="original-query-section">
+                        <label>原始查询：</label>
+                        <div class="query-display">{{ userQuery }}</div>
+                    </div>
+
+                    <!-- 生成的SQL显示 -->
+                    <div class="generated-sql-section">
+                        <label>生成的SQL：</label>
+                        <div class="sql-display-readonly">{{ generatedSql }}</div>
+                    </div>
+
+                    <!-- 修正SQL输入(仅在修正模式下显示) -->
+                    <div v-if="feedbackType === 'correction'" class="corrected-sql-section">
+                        <label>修正的SQL <span class="required">*</span>：</label>
+                        <textarea 
+                            v-model="correctedSql"
+                            class="corrected-sql-input"
+                            placeholder="请输入修正后的SQL语句..."
+                            rows="6"></textarea>
+                    </div>
+
+                    <!-- 问题描述 -->
+                    <div class="feedback-description-section">
+                        <label>
+                            {{ feedbackType === 'correction' ? '修正说明（可选）：' : '问题描述（可选）：' }}
+                        </label>
+                        <textarea 
+                            v-model="feedbackDescription"
+                            class="feedback-description-input"
+                            :placeholder="feedbackType === 'correction' ? '请简要说明修正的原因...' : '请描述SQL存在的问题...'"
+                            rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeFeedbackDialog">
+                        取消
+                    </button>
+                    <button 
+                        class="btn btn-primary" 
+                        @click="submitDetailedFeedback" 
+                        :disabled="submittingFeedback || (feedbackType === 'correction' && !correctedSql.trim())">
+                        <i class="fas fa-paper-plane" :class="{ 'fa-spin': submittingFeedback }"></i>
+                        提交反馈
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/app.js"></script>
+</body>
+</html>

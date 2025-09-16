@@ -1,0 +1,437 @@
+# 增强的实体语义识别配置
+# Enhanced Entity Semantics Recognition Configuration
+
+metadata:
+  version: "2.0.0"
+  description: "增强的实体语义识别配置，包含丰富的关键词库和同义词映射"
+  readonly: true
+  maintainer: "SpringAI-MCP System"
+  lastReview: "2025-09-12"
+
+# 增强的实体语义模式
+enhancedEntitySemantics:
+
+  # === 用户相关实体 ===
+  - semanticType: "user_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords: 
+      # 基础关键词
+      - "用户"
+      - "会员"
+      - "账号"
+      - "账户"
+      - "客户"
+      - "顾客"
+      # 同义词和变体
+      - "使用者"
+      - "成员"
+      - "注册用户"
+      - "登录用户"
+      - "活跃用户"
+      - "新用户"
+      - "老用户"
+      - "VIP"
+      - "普通用户"
+      - "管理员"
+      - "操作员"
+      - "访客"
+      # 英文关键词
+      - "user"
+      - "member"
+      - "account"
+      - "customer"
+      - "client"
+    tableNamePatterns: 
+      - ".*user.*"
+      - ".*member.*"
+      - ".*account.*"
+      - ".*customer.*"
+      - ".*client.*"
+      - ".*person.*"
+      - ".*profile.*"
+    commonFields: ["id", "username", "email", "phone", "name", "nickname", "created_at", "updated_at", "status", "level", "avatar", "last_login"]
+    fieldSemanticMapping:
+      identifier: ["id", "user_id", "uid", "member_id"]
+      name: ["username", "name", "nickname", "display_name", "full_name"]
+      contact: ["email", "phone", "mobile", "telephone", "contact"]
+      time: ["created_at", "updated_at", "last_login", "register_time", "login_time"]
+      status: ["status", "is_active", "enabled", "is_deleted", "level"]
+    description: "用户类实体的增强语义模式，包含全面的用户相关词汇"
+
+  # === 内容相关实体 ===
+  - semanticType: "content_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords:
+      # 基础关键词  
+      - "文章"
+      - "内容"
+      - "帖子"
+      - "新闻"
+      - "博客"
+      - "资讯"
+      - "信息"
+      # 内容类型变体
+      - "动态"
+      - "说说"
+      - "微博"
+      - "推文"
+      - "状态"
+      - "更新"
+      - "发布"
+      - "作品"
+      - "创作"
+      - "稿件"
+      - "素材"
+      - "媒体"
+      - "资源"
+      # 特定内容类型
+      - "视频"
+      - "图片"
+      - "音频"
+      - "文档"
+      - "教程"
+      - "课程"
+      - "问答"
+      - "评论"
+      - "回复"
+      # 英文关键词
+      - "article"
+      - "content"
+      - "post"
+      - "news"
+      - "blog"
+      - "media"
+      - "resource"
+    tableNamePatterns:
+      - ".*article.*"
+      - ".*post.*"
+      - ".*content.*"
+      - ".*news.*"
+      - ".*blog.*"
+      - ".*media.*"
+      - ".*resource.*"
+      - ".*document.*"
+      - ".*material.*"
+      - ".*publication.*"
+    commonFields: ["id", "title", "content", "summary", "author_id", "category_id", "status", "published_at", "created_at", "updated_at", "view_count", "like_count"]
+    fieldSemanticMapping:
+      identifier: ["id", "content_id", "article_id", "post_id"]
+      title: ["title", "subject", "headline", "name", "caption"]
+      content: ["content", "body", "text", "description", "detail"]
+      author: ["author_id", "user_id", "creator_id", "publisher_id"]
+      category: ["category_id", "type_id", "tag_id", "classification"]
+      time: ["created_at", "updated_at", "published_at", "publish_time"]
+      metrics: ["view_count", "like_count", "share_count", "comment_count"]
+      status: ["status", "published", "is_deleted", "enabled", "visible"]
+    description: "内容类实体的增强语义模式，覆盖各种内容类型"
+
+  # === 订单交易相关实体 ===
+  - semanticType: "order_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords:
+      # 订单相关
+      - "订单"
+      - "交易"
+      - "支付"
+      - "购买"
+      - "下单"
+      - "付款"
+      - "结算"
+      - "消费"
+      # 商业活动
+      - "销售"
+      - "营业"
+      - "收入"
+      - "流水"
+      - "账单"
+      - "发票"
+      - "收据"
+      - "凭证"
+      - "记录"
+      # 状态描述
+      - "待付款"
+      - "已付款"
+      - "已发货"
+      - "已完成"
+      - "已取消"
+      - "退款"
+      - "退货"
+      # 英文关键词
+      - "order"
+      - "transaction"
+      - "payment"
+      - "purchase"
+      - "invoice"
+      - "bill"
+      - "receipt"
+    tableNamePatterns:
+      - ".*order.*"
+      - ".*transaction.*"
+      - ".*payment.*"
+      - ".*purchase.*"
+      - ".*invoice.*"
+      - ".*bill.*"
+      - ".*receipt.*"
+      - ".*trade.*"
+      - ".*deal.*"
+    commonFields: ["id", "order_no", "user_id", "amount", "status", "payment_method", "created_at", "updated_at", "paid_at", "shipped_at", "completed_at"]
+    fieldSemanticMapping:
+      identifier: ["id", "order_id", "transaction_id", "payment_id"]
+      order_number: ["order_no", "order_number", "transaction_no", "bill_no"]
+      user: ["user_id", "customer_id", "buyer_id", "payer_id"]
+      amount: ["amount", "total", "price", "cost", "fee", "value"]
+      time: ["created_at", "updated_at", "paid_at", "shipped_at", "completed_at"]
+      status: ["status", "order_status", "payment_status", "is_paid", "is_completed"]
+      method: ["payment_method", "pay_type", "payment_channel"]
+    description: "订单交易类实体的增强语义模式"
+
+  # === 产品商品相关实体 ===
+  - semanticType: "product_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords:
+      # 产品相关
+      - "产品"
+      - "商品"
+      - "物品"
+      - "货物"
+      - "物资"
+      - "商品"
+      - "服务"
+      - "项目"
+      # 商品类型
+      - "数码产品"
+      - "电子产品"
+      - "日用品"
+      - "食品"
+      - "服装"
+      - "书籍"
+      - "软件"
+      - "应用"
+      # 商业术语
+      - "库存"
+      - "SKU"
+      - "单品"
+      - "商品品类"
+      - "分类"
+      # 英文关键词
+      - "product"
+      - "goods"
+      - "item"
+      - "commodity"
+      - "merchandise"
+      - "sku"
+    tableNamePatterns:
+      - ".*product.*"
+      - ".*goods.*"
+      - ".*item.*"
+      - ".*commodity.*"
+      - ".*merchandise.*"
+      - ".*sku.*"
+      - ".*inventory.*"
+    commonFields: ["id", "name", "title", "description", "price", "stock", "category_id", "brand_id", "status", "created_at", "updated_at"]
+    fieldSemanticMapping:
+      identifier: ["id", "product_id", "goods_id", "item_id", "sku_id"]
+      name: ["name", "title", "product_name", "goods_name", "item_name"]
+      description: ["description", "detail", "intro", "summary", "spec"]
+      price: ["price", "cost", "amount", "unit_price", "sale_price"]
+      stock: ["stock", "inventory", "quantity", "stock_quantity"]
+      category: ["category_id", "type_id", "class_id", "brand_id"]
+      time: ["created_at", "updated_at", "published_at", "launch_time"]
+      status: ["status", "is_active", "is_published", "enabled", "available"]
+    description: "产品商品类实体的增强语义模式"
+
+  # === 日志记录相关实体 ===
+  - semanticType: "log_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords:
+      # 日志相关
+      - "日志"
+      - "记录"
+      - "历史"
+      - "轨迹"
+      - "痕迹"
+      - "操作记录"
+      - "活动记录"
+      - "访问记录"
+      # 系统术语
+      - "系统日志"
+      - "操作日志"
+      - "错误日志"
+      - "访问日志"
+      - "审计日志"
+      - "安全日志"
+      # 动作相关
+      - "行为"
+      - "动作"
+      - "事件"
+      - "活动"
+      - "操作"
+      - "执行"
+      # 英文关键词
+      - "log"
+      - "record"
+      - "history"
+      - "track"
+      - "trace"
+      - "audit"
+      - "activity"
+      - "event"
+      - "action"
+    tableNamePatterns:
+      - ".*log.*"
+      - ".*record.*"
+      - ".*history.*"
+      - ".*track.*"
+      - ".*trace.*"
+      - ".*audit.*"
+      - ".*activity.*"
+      - ".*event.*"
+      - ".*action.*"
+    commonFields: ["id", "user_id", "action", "target_type", "target_id", "ip", "user_agent", "created_at", "result", "message"]
+    fieldSemanticMapping:
+      identifier: ["id", "log_id", "record_id", "event_id"]
+      user: ["user_id", "operator_id", "creator_id", "actor_id"]
+      action: ["action", "operation", "event_type", "activity_type"]
+      target: ["target_type", "target_id", "object_type", "object_id"]
+      time: ["created_at", "occurred_at", "timestamp", "event_time"]
+      result: ["result", "status", "success", "error_code"]
+      message: ["message", "description", "detail", "remark", "note"]
+    description: "日志记录类实体的增强语义模式"
+
+  # === 分类标签相关实体 ===
+  - semanticType: "category_like"
+    confidence: 1.0
+    readonly: true
+    matchKeywords:
+      # 分类相关
+      - "分类"
+      - "类别"
+      - "种类"
+      - "类型"
+      - "分组"
+      - "标签"
+      - "标记"
+      - "标识"
+      # 层级相关
+      - "层级"
+      - "级别"
+      - "等级"
+      - "层次"
+      - "目录"
+      - "栏目"
+      - "频道"
+      - "版块"
+      # 英文关键词
+      - "category"
+      - "class"
+      - "type"
+      - "tag"
+      - "label"
+      - "group"
+      - "section"
+      - "channel"
+    tableNamePatterns:
+      - ".*category.*"
+      - ".*class.*"
+      - ".*type.*"
+      - ".*tag.*"
+      - ".*label.*"
+      - ".*group.*"
+      - ".*section.*"
+      - ".*channel.*"
+    commonFields: ["id", "name", "description", "parent_id", "level", "sort_order", "status", "created_at", "updated_at"]
+    fieldSemanticMapping:
+      identifier: ["id", "category_id", "type_id", "tag_id", "class_id"]
+      name: ["name", "title", "label", "category_name", "type_name"]
+      description: ["description", "intro", "remark", "note"]
+      hierarchy: ["parent_id", "parent_category_id", "level", "depth"]
+      order: ["sort_order", "order", "sequence", "priority", "weight"]
+      time: ["created_at", "updated_at"]
+      status: ["status", "is_active", "enabled", "visible"]
+    description: "分类标签类实体的增强语义模式"
+
+# 同义词映射表
+synonymMapping:
+  # 动作同义词
+  actions:
+    查询: ["查找", "搜索", "检索", "寻找", "获取", "取得", "拿到", "找到"]
+    显示: ["展示", "呈现", "列出", "列举", "罗列", "给出", "提供"]
+    统计: ["计算", "求和", "汇总", "合计", "计数", "统计"]
+    筛选: ["过滤", "选择", "挑选", "筛选", "找出", "选出"]
+    排序: ["排列", "按顺序", "排名", "排行"]
+  
+  # 时间同义词
+  timeExpressions:
+    最近: ["近期", "近来", "最新", "新近", "刚刚"]
+    今天: ["今日", "当天", "本日"]
+    昨天: ["昨日", "前天", "上一天"]
+    本周: ["这周", "当周", "这一周"]
+    本月: ["这个月", "当月", "这一月"]
+    本年: ["今年", "当年", "这一年"]
+  
+  # 数量同义词
+  quantityExpressions:
+    所有: ["全部", "全体", "整个", "所有的", "全部的"]
+    部分: ["一些", "若干", "几个", "部分的"]
+    多个: ["多种", "多项", "多条", "多笔"]
+    单个: ["一个", "单条", "单项", "单笔"]
+
+# 领域特定词汇库
+domainSpecificVocabulary:
+  
+  # 电商领域
+  ecommerce:
+    entities: ["商品", "订单", "用户", "购物车", "收藏", "评价", "店铺", "品牌"]
+    actions: ["购买", "下单", "支付", "发货", "收货", "退款", "退货", "评价"]
+    attributes: ["价格", "库存", "销量", "评分", "优惠", "促销", "折扣"]
+  
+  # 内容管理领域
+  cms:
+    entities: ["文章", "页面", "栏目", "用户", "评论", "标签", "媒体", "模板"]
+    actions: ["发布", "编辑", "删除", "审核", "置顶", "推荐", "分享"]
+    attributes: ["标题", "内容", "摘要", "作者", "分类", "状态", "浏览量"]
+  
+  # 用户管理领域
+  user_management:
+    entities: ["用户", "角色", "权限", "部门", "职位", "组织", "团队"]
+    actions: ["注册", "登录", "授权", "禁用", "激活", "分配", "变更"]
+    attributes: ["姓名", "邮箱", "手机", "状态", "等级", "积分", "余额"]
+  
+  # 数据分析领域
+  analytics:
+    entities: ["报表", "指标", "维度", "数据源", "仪表板", "图表"]
+    actions: ["统计", "分析", "汇总", "对比", "趋势", "预测", "监控"]
+    attributes: ["数量", "比例", "增长", "下降", "峰值", "平均", "总计"]
+
+# 上下文感知规则
+contextAwareRules:
+  # 基于共现词的实体类型推断
+  coOccurrencePatterns:
+    - keywords: ["用户", "登录", "注册"]
+      suggestedType: "user_like"
+      confidence: 0.9
+    
+    - keywords: ["文章", "发布", "浏览"]
+      suggestedType: "content_like"
+      confidence: 0.9
+      
+    - keywords: ["订单", "支付", "金额"]
+      suggestedType: "order_like"
+      confidence: 0.9
+      
+    - keywords: ["商品", "价格", "库存"]
+      suggestedType: "product_like"
+      confidence: 0.9
+
+  # 基于动词的意图推断
+  verbIntentMapping:
+    查询类: ["查询", "查找", "搜索", "检索", "获取", "显示", "展示", "列出"]
+    统计类: ["统计", "计算", "汇总", "求和", "计数", "分析"]
+    筛选类: ["筛选", "过滤", "选择", "找出", "挑选"]
+    排序类: ["排序", "排名", "排行", "按顺序"]
+    比较类: ["比较", "对比", "相比", "差异"]

@@ -1,0 +1,125 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.kami'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '24'
+    targetCompatibility = '24'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    // Spring Milestones (Spring AI仍在开发中)
+    maven { url 'https://repo.spring.io/milestone' }
+    // Lombok edge - Java 24必需
+    maven { url 'https://projectlombok.org/edge-releases' }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:1.0.0-M5"
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    
+    // Spring AI Core和OpenAI
+    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M5'
+    
+    // JSON processing
+    implementation 'com.fasterxml.jackson.core:jackson-core'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    
+    // Annotations
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+    
+    // Database dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+    implementation 'com.mysql:mysql-connector-j:8.4.0'  // 升级到最新稳定版
+    implementation 'com.zaxxer:HikariCP'
+    
+    // SQL parsing and validation
+    implementation 'com.github.jsqlparser:jsqlparser:4.7'
+    
+    // Lombok - Java 24需要edge版本 (生产环境考虑降级Java版本)
+    compileOnly 'org.projectlombok:lombok:edge-SNAPSHOT'
+    annotationProcessor 'org.projectlombok:lombok:edge-SNAPSHOT'
+    
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// 启用Java 24预览特性和兼容性设置
+tasks.withType(JavaCompile) {
+    options.compilerArgs += [
+        '--enable-preview',
+        '-Xlint:-preview'
+    ]
+    options.fork = true
+    options.forkOptions.jvmArgs += [
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
+        '--add-opens', 'jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED'
+    ]
+}
+
+tasks.withType(Test) {
+    jvmArgs += [
+        '--enable-preview',
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '-XX:+EnableDynamicAgentLoading'
+    ]
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs += [
+        '--enable-preview',
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED', 
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '-XX:+EnableDynamicAgentLoading'
+    ]
+}
+
+// Spring Boot 运行配置
+bootRun {
+    jvmArgs = [
+        '--enable-preview',
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED',
+        '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+        '--add-opens', 'java.management/sun.management=ALL-UNNAMED',
+        '-XX:+EnableDynamicAgentLoading',
+        '-Dio.netty.tryReflectionSetAccessible=true'
+    ]
+}

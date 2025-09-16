@@ -1,0 +1,109 @@
+server:
+  port: 8080
+  # 启用虚拟线程
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+
+spring:
+  application:
+    name: spring-ai-mcp
+  threads:
+    virtual:
+      enabled: true  # 启用虚拟线程支持
+  
+  # 静态资源配置
+  web:
+    resources:
+      static-locations: classpath:/static/
+      cache:
+        period: 3600  # 静态资源缓存1小时
+      chain:
+        cache: true
+        strategy:
+          content:
+            enabled: true
+  mvc:
+    static-path-pattern: /**
+  
+  # 数据源配置
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:test}?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    # HikariCP连接池配置
+    hikari:
+      pool-name: Text2SQL-HikariCP
+      minimum-idle: 5
+      maximum-pool-size: 20
+      auto-commit: true
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
+  
+  ai:
+    # DeepSeek配置 (使用OpenAI兼容接口)
+    openai:
+      api-key: ${DEEPSEEK_API_KEY:}
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.7
+          max-tokens: 4096
+    
+    # MCP Client配置
+    mcp:
+      client:
+        # 文件系统MCP服务器
+        filesystem:
+          transport-type: stdio
+          command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+          enabled: true
+        
+        # GitHub MCP服务器
+        github:
+          transport-type: stdio  
+          command: ["npx", "-y", "@modelcontextprotocol/server-github"]
+          environment:
+            GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN:}
+          enabled: false
+        
+        # SQLite MCP服务器
+        sqlite:
+          transport-type: stdio
+          command: ["npx", "-y", "@modelcontextprotocol/server-sqlite", "--db-path", "/tmp/example.db"]
+          enabled: false
+
+# Text2SQL配置
+text2sql:
+  security:
+    readonly: true  # 只允许SELECT查询
+    max-rows: 1000  # 最大返回行数
+    timeout: 30     # 查询超时时间(秒)
+  cache:
+    enabled: true
+    schema-ttl: 3600  # 表结构缓存1小时
+    query-ttl: 300    # 查询结果缓存5分钟
+
+logging:
+  level:
+    com.kami.springai.mcp: INFO
+    org.springframework.ai.mcp: DEBUG
+    com.zaxxer.hikari: INFO
+  pattern:
+    console: '%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}'
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,mcp
+  endpoint:
+    health:
+      show-details: always

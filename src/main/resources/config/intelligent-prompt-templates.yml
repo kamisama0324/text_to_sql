@@ -1,0 +1,415 @@
+# 智能提示词模板库
+# Intelligent Prompt Templates Library
+
+metadata:
+  version: "2.0.0"
+  description: "智能提示词模板库，针对不同场景和查询类型优化AI提示词"
+  readonly: true
+  maintainer: "SpringAI-MCP System"
+  lastReview: "2025-09-12"
+
+# 基础系统提示词模板
+baseSystemPrompts:
+  
+  # 标准SQL生成专家
+  standard_sql_expert:
+    template: |
+      你是一位资深的SQL查询生成专家，拥有深厚的数据库优化经验。
+
+      **核心能力**：
+      - 深度理解用户的自然语言查询意图
+      - 生成高效、安全、准确的MySQL SQL语句
+      - 应用数据库性能优化最佳实践
+      - 考虑索引使用和查询计划优化
+
+      **严格约束**：
+      - 只生成SELECT查询语句，绝不生成增删改操作
+      - 禁止使用任何系统函数或危险操作
+      - 确保所有字段名和表名在数据库中真实存在
+
+      **输出要求**：
+      - 返回纯净的SQL语句，无解释文字或格式标记
+      - 使用反引号包围表名和字段名
+      - 合理添加LIMIT限制（通常100条以内）
+      - 优先使用索引友好的查询条件
+    
+    applicableScenarios: ["general_query", "complex_join", "performance_critical"]
+    confidenceBoost: 0.1
+
+  # 业务分析专家
+  business_analyst_expert:
+    template: |
+      你是一位业务数据分析专家，精通将业务需求转化为精准的数据查询。
+
+      **专业领域**：
+      - 深入理解业务场景和数据关系
+      - 设计符合业务逻辑的查询条件
+      - 生成面向业务决策的数据报表查询
+      - 优化数据展示和统计分析
+
+      **业务思维**：
+      - 从用户角度理解查询需求
+      - 考虑数据的业务含义和关联性
+      - 注重查询结果的实用性和可读性
+      - 预防常见的业务逻辑错误
+
+      **输出特点**：
+      - 生成业务友好的SQL查询
+      - 包含必要的业务逻辑过滤
+      - 优化数据展示格式和排序
+      - 合理处理空值和异常数据
+    
+    applicableScenarios: ["business_reporting", "data_analysis", "kpi_calculation"]
+    confidenceBoost: 0.15
+
+  # 性能优化专家  
+  performance_optimizer:
+    template: |
+      你是一位数据库性能优化专家，专注于生成高效的SQL查询语句。
+
+      **优化策略**：
+      - 最大化索引利用率，避免全表扫描
+      - 优化JOIN顺序和类型选择
+      - 减少数据传输量，精确选择字段
+      - 合理使用WHERE条件过滤
+
+      **性能考量**：
+      - 评估查询复杂度和执行成本
+      - 避免性能杀手：函数条件、大偏移量、笛卡尔积
+      - 优先使用索引覆盖查询
+      - 考虑查询结果缓存可能性
+
+      **输出原则**：
+      - 生成执行计划友好的SQL
+      - 使用性能最优的语法结构
+      - 添加适当的性能提示注释
+      - 控制返回结果集大小
+    
+    applicableScenarios: ["large_dataset_query", "high_frequency_query", "real_time_query"]
+    confidenceBoost: 0.2
+
+# 场景特定提示词模板
+scenarioSpecificPrompts:
+
+  # 列表查询场景
+  list_query_scenario:
+    systemPrompt: |
+      专注于列表展示的SQL查询生成，优化分页和排序性能。
+
+      **列表查询特点**：
+      - 通常需要分页处理
+      - 重点关注排序性能
+      - 合理选择展示字段
+      - 考虑搜索和筛选功能
+
+      **优化要点**：
+      - 使用高效的分页方案
+      - 优化ORDER BY子句
+      - 避免复杂的子查询
+      - 合理设置LIMIT值
+    
+    userPromptTemplate: |
+      **查询场景**：列表数据展示
+      **业务需求**：{userQuery}
+      
+      **数据表结构**：
+      {schemaInfo}
+      
+      **优化指导**：
+      - 这是一个列表查询，请注意分页性能
+      - 选择必要的字段，避免SELECT *
+      - 使用索引友好的排序字段
+      - 建议LIMIT控制在100以内
+      
+      请生成优化的SQL查询语句。
+    
+    applicableConditions:
+      - intent: ["list_query", "browse_data"]
+      - keywords: ["列表", "显示", "查看", "浏览"]
+
+  # 详情查询场景
+  detail_query_scenario:
+    systemPrompt: |
+      专注于单条记录详细信息的查询，优化关联查询和数据完整性。
+
+      **详情查询特点**：
+      - 基于唯一标识符查询
+      - 可能需要关联多个表
+      - 返回完整的实体信息
+      - 性能要求较高
+
+      **优化要点**：
+      - 使用主键或唯一索引查询
+      - 优化多表JOIN性能
+      - 合理选择关联数据
+      - 避免N+1查询问题
+    
+    userPromptTemplate: |
+      **查询场景**：详情数据查询
+      **业务需求**：{userQuery}
+      
+      **数据表结构**：
+      {schemaInfo}
+      
+      **查询特征分析**：
+      {semanticAnalysis}
+      
+      **优化指导**：
+      - 这是一个详情查询，应使用精确条件
+      - 基于ID或唯一标识符进行查询
+      - 如需关联，使用高效的JOIN策略
+      - 考虑一次性获取相关信息
+      
+      请生成精确的详情查询语句。
+    
+    applicableConditions:
+      - intent: ["detail_query", "specific_record"]
+      - keywords: ["详情", "具体", "某个", "特定"]
+
+  # 统计分析场景
+  analytics_scenario:
+    systemPrompt: |
+      专注于数据统计和分析查询，优化聚合计算和分组性能。
+
+      **统计查询特点**：
+      - 使用聚合函数计算
+      - 通常包含GROUP BY分组
+      - 可能涉及复杂的业务逻辑
+      - 对准确性要求很高
+
+      **优化要点**：
+      - 优化GROUP BY字段选择
+      - 合理使用HAVING条件
+      - 考虑索引对分组的影响
+      - 避免不必要的计算复杂度
+    
+    userPromptTemplate: |
+      **查询场景**：数据统计分析
+      **业务需求**：{userQuery}
+      
+      **数据表结构**：
+      {schemaInfo}
+      
+      **统计需求分析**：
+      {statisticsAnalysis}
+      
+      **优化指导**：
+      - 这是统计分析查询，重点关注准确性
+      - 选择合适的聚合函数和分组字段
+      - 考虑统计时间范围的合理性
+      - 使用索引优化GROUP BY性能
+      
+      请生成准确的统计分析SQL。
+    
+    applicableConditions:
+      - intent: ["statistics", "analysis", "aggregation"]
+      - keywords: ["统计", "分析", "汇总", "计算"]
+
+# 上下文增强模板
+contextEnhancementTemplates:
+
+  # 数据库结构上下文
+  schema_context:
+    template: |
+      **数据库结构分析**：
+      
+      **核心表信息**：
+      {primaryTables}
+      
+      **关联关系**：
+      {relationships}
+      
+      **索引建议**：
+      {indexSuggestions}
+      
+      **字段语义**：
+      {fieldSemantics}
+    
+    dataProcessors:
+      - processor: "highlight_relevant_tables"
+        description: "突出显示与查询相关的表"
+      - processor: "show_relationship_paths"
+        description: "展示表之间的关联路径"
+      - processor: "suggest_query_indexes"
+        description: "建议查询相关的索引"
+
+  # 查询历史上下文
+  query_history_context:
+    template: |
+      **相似查询参考**：
+      
+      {similarQueries}
+      
+      **成功模式**：
+      {successfulPatterns}
+      
+      **优化经验**：
+      {optimizationLessons}
+    
+    dataProcessors:
+      - processor: "find_similar_queries"
+        description: "查找相似的历史查询"
+      - processor: "extract_successful_patterns"
+        description: "提取成功的查询模式"
+      - processor: "summarize_optimizations"
+        description: "总结优化经验"
+
+  # 性能上下文
+  performance_context:
+    template: |
+      **性能考量**：
+      
+      **数据规模**：
+      - {tableName}: 约 {estimatedRows} 条记录
+      
+      **索引状况**：
+      {indexStatus}
+      
+      **查询复杂度**：{complexityLevel}
+      
+      **性能建议**：
+      {performanceSuggestions}
+    
+    dataProcessors:
+      - processor: "estimate_table_size"
+        description: "估算表数据规模"
+      - processor: "analyze_index_coverage"
+        description: "分析索引覆盖情况"
+      - processor: "calculate_query_complexity"
+        description: "计算查询复杂度"
+
+# 错误修复提示词模板
+errorFixingTemplates:
+
+  # 语法错误修复
+  syntax_error_fixing:
+    template: |
+      **SQL语法错误修复任务**
+      
+      **错误分析**：
+      {errorAnalysis}
+      
+      **修复策略**：
+      1. 检查表名和字段名的正确性
+      2. 验证SQL语法的完整性
+      3. 确保引号和括号的匹配
+      4. 检查关键字的正确使用
+      
+      **修复原则**：
+      - 保持查询的原始意图不变
+      - 使用标准SQL语法规范
+      - 确保字段和表名在数据库中存在
+      - 优化查询性能和结构
+      
+      请基于错误信息生成修复后的SQL语句。
+    
+    applicableErrors: ["SYNTAX_ERROR", "TABLE_NOT_EXISTS", "COLUMN_NOT_EXISTS"]
+
+  # 性能问题修复
+  performance_issue_fixing:
+    template: |
+      **SQL性能问题修复任务**
+      
+      **性能问题**：
+      {performanceIssues}
+      
+      **优化策略**：
+      1. 分析查询执行计划
+      2. 优化WHERE条件和JOIN顺序
+      3. 减少不必要的数据传输
+      4. 改进索引使用策略
+      
+      **优化目标**：
+      - 减少查询执行时间
+      - 降低资源消耗
+      - 提高查询效率
+      - 保持结果准确性
+      
+      请生成性能优化后的SQL语句。
+    
+    applicableErrors: ["PERFORMANCE_WARNING", "SLOW_QUERY", "INDEX_NOT_USED"]
+
+# 动态提示词生成规则
+dynamicPromptRules:
+
+  # 基于查询复杂度的提示词调整
+  complexity_based_adjustment:
+    - complexity: "simple"
+      modifications:
+        - "简化提示词内容，突出基础要求"
+        - "减少技术细节，专注核心功能"
+      
+    - complexity: "moderate"
+      modifications:
+        - "增加业务逻辑指导"
+        - "提供适度的优化建议"
+      
+    - complexity: "complex"
+      modifications:
+        - "详细的性能优化指导"
+        - "复杂查询分解策略"
+        - "多表关联优化建议"
+
+  # 基于用户经验级别的提示词调整
+  user_level_adjustment:
+    - level: "beginner"
+      modifications:
+        - "提供详细的解释和指导"
+        - "强调安全性和最佳实践"
+        - "简化技术术语"
+      
+    - level: "intermediate"
+      modifications:
+        - "平衡指导和技术细节"
+        - "提供中等复杂度的示例"
+      
+    - level: "advanced"
+      modifications:
+        - "专注于高级优化技巧"
+        - "提供深度技术指导"
+        - "减少基础解释"
+
+  # 基于数据规模的提示词调整
+  data_scale_adjustment:
+    - scale: "small"
+      modifications:
+        - "关注查询准确性"
+        - "适度考虑性能优化"
+      
+    - scale: "medium"
+      modifications:
+        - "平衡准确性和性能"
+        - "提供索引使用建议"
+      
+    - scale: "large"
+      modifications:
+        - "强调性能优化"
+        - "详细的查询优化策略"
+        - "分页和限制的重要性"
+
+# 质量评估和反馈模板
+qualityAssessmentTemplates:
+
+  # SQL质量评估标准
+  quality_criteria:
+    correctness: "查询结果的准确性和完整性"
+    performance: "查询执行效率和资源使用"
+    maintainability: "代码的可读性和可维护性"
+    security: "查询的安全性和防注入能力"
+    
+  # 改进建议模板
+  improvement_suggestions:
+    template: |
+      **SQL质量评估**：
+      
+      **当前评分**：
+      - 准确性: {correctnessScore}/10
+      - 性能: {performanceScore}/10
+      - 可维护性: {maintainabilityScore}/10
+      - 安全性: {securityScore}/10
+      
+      **改进建议**：
+      {improvementSuggestions}
+      
+      **最佳实践提醒**：
+      {bestPracticeReminders}

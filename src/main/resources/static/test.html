@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2SQL API 测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #666;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: Monaco, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .url-display {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Text2SQL API 测试页面</h1>
+        
+        <!-- 服务器信息测试 -->
+        <div class="test-section">
+            <h3>📊 1. 服务器信息</h3>
+            <div class="url-display">GET /api/mcp/server-info</div>
+            <button onclick="testServerInfo()">测试服务器信息</button>
+            <div id="serverInfoResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- 数据库结构测试 -->
+        <div class="test-section">
+            <h3>🗄️ 2. 数据库结构</h3>
+            <div class="url-display">GET /api/mcp/database-schema</div>
+            <button onclick="testDatabaseSchema()">获取数据库结构</button>
+            <div id="schemaResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Text2SQL转换测试 -->
+        <div class="test-section">
+            <h3>🔄 3. Text2SQL 转换</h3>
+            <div class="url-display">POST /api/mcp/text2sql</div>
+            <div class="form-group">
+                <label for="queryInput">自然语言查询：</label>
+                <textarea id="queryInput" rows="3" placeholder="例如：查询所有用户信息">查询所有人设信息</textarea>
+            </div>
+            <div class="form-group">
+                <label for="contextInput">上下文（可选）：</label>
+                <input id="contextInput" type="text" placeholder="额外上下文信息">
+            </div>
+            <button onclick="testText2Sql()">转换为SQL</button>
+            <div id="text2sqlResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- SQL执行测试 -->
+        <div class="test-section">
+            <h3>⚡ 4. SQL 执行</h3>
+            <div class="url-display">POST /api/mcp/execute-sql</div>
+            <div class="form-group">
+                <label for="sqlInput">SQL语句：</label>
+                <textarea id="sqlInput" rows="3" placeholder="SELECT * FROM echoing_characters LIMIT 5;">SELECT * FROM echoing_characters WHERE is_valid = 1 LIMIT 5;</textarea>
+            </div>
+            <button onclick="testExecuteSql()">执行SQL</button>
+            <div id="executeSqlResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- SQL解释测试 -->
+        <div class="test-section">
+            <h3>📖 5. SQL 解释</h3>
+            <div class="url-display">POST /api/mcp/explain-sql</div>
+            <div class="form-group">
+                <label for="explainSqlInput">SQL语句：</label>
+                <textarea id="explainSqlInput" rows="3" placeholder="SELECT * FROM users WHERE age > 18;">SELECT * FROM echoing_characters WHERE is_valid = 1;</textarea>
+            </div>
+            <button onclick="testExplainSql()">解释SQL</button>
+            <div id="explainSqlResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- 工具列表测试 -->
+        <div class="test-section">
+            <h3>🛠️ 6. 工具列表</h3>
+            <div class="url-display">GET /api/mcp/tools</div>
+            <button onclick="testTools()">获取工具列表</button>
+            <div id="toolsResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 通用请求函数
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: true, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        // 显示结果
+        function showResult(elementId, result) {
+            const element = document.getElementById(elementId);
+            
+            if (result.success) {
+                element.className = 'result success';
+                element.textContent = `✅ 请求成功 (HTTP ${result.status})\n\n` + 
+                    JSON.stringify(result.data, null, 2);
+            } else {
+                element.className = 'result error';
+                element.textContent = `❌ 请求失败\n\n${result.error}`;
+            }
+            
+            element.style.display = 'block';
+        }
+
+        // 测试服务器信息
+        async function testServerInfo() {
+            const result = await makeRequest('/api/mcp/server-info');
+            showResult('serverInfoResult', result);
+        }
+
+        // 测试数据库结构
+        async function testDatabaseSchema() {
+            const result = await makeRequest('/api/mcp/database-schema');
+            showResult('schemaResult', result);
+        }
+
+        // 测试Text2SQL转换
+        async function testText2Sql() {
+            const query = document.getElementById('queryInput').value;
+            const context = document.getElementById('contextInput').value;
+            
+            const result = await makeRequest('/api/mcp/text2sql', {
+                method: 'POST',
+                body: JSON.stringify({
+                    prompt: query,
+                    context: context || undefined
+                })
+            });
+            
+            showResult('text2sqlResult', result);
+        }
+
+        // 测试SQL执行
+        async function testExecuteSql() {
+            const sql = document.getElementById('sqlInput').value;
+            
+            const result = await makeRequest('/api/mcp/execute-sql', {
+                method: 'POST',
+                body: JSON.stringify({ sql: sql })
+            });
+            
+            showResult('executeSqlResult', result);
+        }
+
+        // 测试SQL解释
+        async function testExplainSql() {
+            const sql = document.getElementById('explainSqlInput').value;
+            
+            const result = await makeRequest('/api/mcp/explain-sql', {
+                method: 'POST',
+                body: JSON.stringify({ sql: sql })
+            });
+            
+            showResult('explainSqlResult', result);
+        }
+
+        // 测试工具列表
+        async function testTools() {
+            const result = await makeRequest('/api/mcp/tools');
+            showResult('toolsResult', result);
+        }
+
+        // 页面加载时自动测试服务器连接
+        window.addEventListener('load', function() {
+            console.log('页面加载完成，自动测试服务器连接...');
+            testServerInfo();
+        });
+    </script>
+</body>
+</html>
