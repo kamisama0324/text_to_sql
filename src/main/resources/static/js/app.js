@@ -327,7 +327,7 @@ const app = createApp({
                 }
 
                 rawResponse.value = data;
-                const responseData = data.data || data.result;
+                const responseData = data.content || data.data || data.result;
                 console.log('Text2SQL API响应数据:', responseData);
                 parseTextToSqlResponse(responseData);
                 showResults.value = true;
