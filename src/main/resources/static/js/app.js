@@ -188,14 +188,15 @@ const app = createApp({
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 
-                // 解析表名 (### 表名)
-                if (line.startsWith('### ')) {
+                // 解析表名 (表名: xxx 或 ### 表名)
+                if (line.startsWith('表名: ') || line.startsWith('### ')) {
                     if (currentTable) {
                         tables.push(currentTable);
                         console.log('添加表:', currentTable.name, '列数:', currentTable.columns.length);
                     }
+                    const tableName = line.startsWith('表名: ') ? line.substring(4) : line.substring(4);
                     currentTable = {
-                        name: line.substring(4),
+                        name: tableName,
                         comment: '',
                         columns: [],
                         foreignKeys: []
@@ -203,17 +204,19 @@ const app = createApp({
                     console.log('发现新表:', currentTable.name);
                 }
                 
-                // 解析表注释
-                else if (line.startsWith('**说明**:') && currentTable) {
-                    currentTable.comment = line.substring(6).trim();
+                // 解析表注释 (说明: xxx 或 **说明**:)
+                else if ((line.startsWith('说明: ') || line.startsWith('**说明**:')) && currentTable) {
+                    currentTable.comment = line.startsWith('说明: ') ? line.substring(4).trim() : line.substring(6).trim();
                 }
                 
-                // 解析字段信息
-                else if (line.startsWith('- `') && currentTable) {
-                    const column = parseColumnLine(line);
-                    if (column) {
-                        currentTable.columns.push(column);
-                        totalColumns++;
+                // 解析字段信息 (  - xxx 或 - `xxx`)
+                else if (line.startsWith('  - ') || line.startsWith('- `')) {
+                    if (currentTable) {
+                        const column = parseColumnLine(line);
+                        if (column) {
+                            currentTable.columns.push(column);
+                            totalColumns++;
+                        }
                     }
                 }
                 
@@ -240,8 +243,12 @@ const app = createApp({
 
         // 解析字段行信息
         const parseColumnLine = (line) => {
-            // 格式: - `column_name` type [主键] [非空] [自增] - comment
-            const match = line.match(/^- `([^`]+)` ([^[]+)/);
+            // 格式1: - `column_name` type [主键] [非空] [自增] - comment
+            // 格式2:   - column_name (TYPE) [主键] - comment
+            let match = line.match(/^[\s-]+`([^`]+)`\s+([^[]+)/);
+            if (!match) {
+                match = line.match(/^[\s-]+(\w+)\s+\(([^)]+)\)/);
+            }
             if (!match) return null;
 
             const name = match[1];
