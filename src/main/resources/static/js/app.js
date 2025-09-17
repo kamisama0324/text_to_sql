@@ -96,8 +96,14 @@ const app = createApp({
 
                 const data = await response.json();
                 
-                if (!data.success) {
-                    throw new Error(data.message || '请求失败');
+                // 某些端点直接返回数据，不包含success字段
+                // 比如 /server-info, /tools 等
+                const isDirectResponse = url.includes('/server-info') || 
+                                       url.includes('/tools') ||
+                                       !data.hasOwnProperty('success');
+                
+                if (!isDirectResponse && !data.success) {
+                    throw new Error(data.message || data.error || '请求失败');
                 }
 
                 return data;
