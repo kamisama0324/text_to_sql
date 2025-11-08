@@ -278,4 +278,40 @@ public class McpController {
             return ResponseEntity.ok(SimpleMcpServer.ToolResult.error("解释失败: " + e.getMessage()));
         }
     }
+
+    /**
+     * 用户反馈接口
+     */
+    @PostMapping("/user-feedback")
+    public ResponseEntity<SimpleMcpServer.ToolResult> submitUserFeedback(
+            @RequestParam String userQuery,
+            @RequestParam String generatedSql,
+            @RequestParam String isCorrect,
+            @RequestParam(required = false) String correctedSql) {
+        try {
+            log.info("收到用户反馈 - 查询: {}, SQL是否正确: {}", userQuery, isCorrect);
+            
+            // 构建反馈消息
+            StringBuilder feedbackMessage = new StringBuilder();
+            feedbackMessage.append("用户查询: ").append(userQuery).append("\n");
+            feedbackMessage.append("生成的SQL: ").append(generatedSql).append("\n");
+            feedbackMessage.append("是否正确: ").append(isCorrect).append("\n");
+            
+            if (correctedSql != null && !correctedSql.isEmpty()) {
+                feedbackMessage.append("修正后的SQL: ").append(correctedSql).append("\n");
+            }
+            
+            // 这里可以将反馈保存到数据库或日志文件中
+            log.info("用户反馈详情:\n{}", feedbackMessage.toString());
+            
+            // 返回成功响应
+            return ResponseEntity.ok(SimpleMcpServer.ToolResult.success(
+                "反馈已成功记录，感谢您帮助我们改进！"
+            ));
+            
+        } catch (Exception e) {
+            log.error("处理用户反馈失败", e);
+            return ResponseEntity.ok(SimpleMcpServer.ToolResult.error("反馈提交失败: " + e.getMessage()));
+        }
+    }
 }

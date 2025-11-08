@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # MySQL数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: text2sql-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-test}
+      MYSQL_USER: ${MYSQL_USER:-springai}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-springai123}
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"  # 映射到3307避免与本地MySQL冲突
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # 初始化SQL脚本
+    networks:
+      - springai-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: text2sql-redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"  # 映射到6380避免与本地Redis冲突
+    volumes:
+      - redis_data:/data
+    networks:
+      - springai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot应用
+  springai-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: springai-mcp:latest
+    container_name: springai-mcp
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # 数据库配置
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-test}
+      MYSQL_USERNAME: ${MYSQL_USER:-springai}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-springai123}
+      
+      # Redis配置
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      
+      # DeepSeek API配置
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      
+      # GitHub Token（如果使用GitHub MCP）
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      
+      # JVM配置
+      JAVA_OPTS: "-Xmx1g -Xms512m"
+      
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    networks:
+      - springai-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Nginx反向代理（可选）
+  nginx:
+    image: nginx:alpine
+    container_name: text2sql-nginx
+    restart: always
+    depends_on:
+      - springai-app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl  # SSL证书目录
+    networks:
+      - springai-network
+
+networks:
+  springai-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
