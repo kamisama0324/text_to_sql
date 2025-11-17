@@ -1,9 +1,10 @@
 // Vue.js 应用主逻辑
-const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, nextTick } = Vue;
 const { ElMessage, ElMessageBox, ElNotification } = ElementPlus;
 
 // API 基础配置
 const API_BASE = '/api/mcp';
+const DATASOURCE_API = '/api/datasources';
 
 // 创建 Vue 应用
 const app = createApp({
@@ -14,6 +15,32 @@ const app = createApp({
         const loadingSchema = ref(false);
         const converting = ref(false);
         const executing = ref(false);
+        
+        // 数据源管理相关数据
+        const showDatasourceModal = ref(false);
+        const editingDatasource = ref(false);
+        const loadingDataSources = ref(false);
+        const savingDatasource = ref(false);
+        const selectedDataSourceId = ref(null);
+        const availableDataSources = ref([]);
+        const currentUserDataSource = ref(null);
+        const showDatasourceDropdown = ref(false);
+        const currentDatasource = reactive({
+            id: null,
+            name: '',
+            type: 'mysql',
+            host: 'localhost',
+            port: 3306,
+            database: '',
+            username: '',
+            password: '',
+            minimumIdle: 5,
+            maximumPoolSize: 10,
+            connectionTimeout: 30000,
+            sslEnabled: false,
+            description: '',
+            active: true
+        });
         
         const userQuery = ref('');
         const currentDatabase = ref('');
@@ -57,16 +84,23 @@ const app = createApp({
                 type: 'error',
                 message: message,
                 duration: 5000,
-                showClose: true
+                showClose: true,
+                offset: 100 // 增大偏移量，确保显示在顶部可见区域
             });
             console.error(title + ':', message);
         };
+        
+        // 初始化时加载用户的数据源
+        onMounted(() => {
+            loadDataSources();
+        });
 
         const showSuccess = (message) => {
             ElMessage({
                 type: 'success',
                 message: message,
-                duration: 3000
+                duration: 3000,
+                offset: 100 // 增大偏移量，确保显示在顶部可见区域
             });
         };
 
@@ -74,13 +108,482 @@ const app = createApp({
             ElMessage({
                 type: 'info',
                 message: message,
-                duration: 3000
+                duration: 3000,
+                offset: 100 // 增大偏移量，确保显示在顶部可见区域
             });
+        };
+
+        // 数据源管理方法
+        const loadDataSources = async () => {
+            try {
+                loadingDataSources.value = true;
+                console.log('开始加载数据源...');
+                const response = await apiRequest(DATASOURCE_API + '?t=' + Date.now()); // 添加时间戳防止缓存
+                console.log('数据源API响应:', response);
+                const allDataSources = response.data || response || [];
+                console.log('解析到的数据源数量:', allDataSources.length);
+
+                // 限制每个用户只能有一个数据源，直接取第一个
+                availableDataSources.value = allDataSources;
+                currentUserDataSource.value = allDataSources[0] || null;
+
+                // 如果有数据源，自动选中第一个
+                if (currentUserDataSource.value) {
+                    selectedDataSourceId.value = currentUserDataSource.value.id;
+                    onDataSourceChange();
+                } else {
+                    selectedDataSourceId.value = null;
+                }
+            } catch (error) {
+                showError('加载数据源失败: ' + error.message);
+                console.error('Failed to load datasources:', error);
+            } finally {
+                loadingDataSources.value = false;
+            }
+        };
+        
+        const toggleDatasourceDropdown = () => {
+            showDatasourceDropdown.value = !showDatasourceDropdown.value;
+            // 点击外部关闭悬浮框
+            if (showDatasourceDropdown.value) {
+                setTimeout(() => {
+                    document.addEventListener('click', closeDropdownOnClickOutside);
+                }, 10);
+            } else {
+                document.removeEventListener('click', closeDropdownOnClickOutside);
+            }
+        };
+        
+        const closeDropdownOnClickOutside = (event) => {
+            const dropdownWrapper = document.querySelector('.datasource-dropdown-wrapper');
+            if (dropdownWrapper && !dropdownWrapper.contains(event.target)) {
+                showDatasourceDropdown.value = false;
+                document.removeEventListener('click', closeDropdownOnClickOutside);
+            }
+        };
+        
+        // 在组件卸载时清理事件监听器
+        onUnmounted(() => {
+            document.removeEventListener('click', closeDropdownOnClickOutside);
+        });
+        
+        const editCurrentDatasource = () => {
+            if (currentUserDataSource.value) {
+                showDatasourceDropdown.value = false;
+                Object.assign(currentDatasource, currentUserDataSource.value);
+                editingDatasource.value = true;
+                showDatasourceModal.value = true;
+            }
+        };
+        
+        const testCurrentUserConnection = async () => {
+            if (currentUserDataSource.value) {
+                showDatasourceDropdown.value = false;
+                try {
+                    // 创建一个包含所有字段的对象，并确保password和encryptedPassword字段都被正确发送
+                    const passwordValue = currentUserDataSource.value.password || '';
+                    const datasourceData = {
+                        ...currentUserDataSource.value,
+                        password: passwordValue,
+                        encryptedPassword: passwordValue // 同时发送到encryptedPassword字段以满足后端验证
+                    };
+                    
+                    const response = await apiRequest(DATASOURCE_API + '/test', {
+                        method: 'POST',
+                        body: JSON.stringify(datasourceData),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response && response.success) {
+                        showSuccess('连接测试成功！');
+                    } else {
+                        showError(response?.message || '连接测试失败');
+                    }
+                } catch (error) {
+                    showError('连接测试失败: ' + error.message);
+                }
+            }
+        };
+        
+        const deleteCurrentDatasource = async () => {
+            if (currentUserDataSource.value) {
+                try {
+                    await ElMessageBox.confirm(
+                        `确定要删除数据源 "${currentUserDataSource.value.name}" 吗？删除后将无法恢复。`,
+                        '确认删除',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }
+                    );
+                    
+                    showDatasourceDropdown.value = false;
+                    const response = await apiRequest(`${DATASOURCE_API}/${currentUserDataSource.value.id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.success || response) {
+                        showSuccess('数据源删除成功');
+                        currentUserDataSource.value = null;
+                        selectedDataSourceId.value = null;
+                        schema.tables = [];
+                        currentDatabase.value = '';
+                    } else {
+                        showError('数据源删除失败');
+                    }
+                } catch (error) {
+                    if (error !== 'cancel') {
+                        showError('删除数据源失败: ' + error.message);
+                    }
+                }
+            }
+        };
+        
+        const getDatabaseTypeName = (type) => {
+            const typeNames = {
+                'mysql': 'MySQL',
+                'postgresql': 'PostgreSQL',
+                'oracle': 'Oracle',
+                'sqlserver': 'SQL Server',
+                'h2': 'H2 Database'
+            };
+            return typeNames[type] || type;
+        };
+
+        const openDataSourceManager = () => {
+            // 不再使用这个方法，而是通过悬浮框管理数据源
+            showDatasourceModal.value = true;
+            editingDatasource.value = false;
+            loadDataSources();
+        };
+
+        const closeDatasourceManager = () => {
+            showDatasourceModal.value = false;
+            editingDatasource.value = false;
+            resetDatasourceForm();
+        };
+
+        const resetDatasourceForm = () => {
+            currentDatasource.id = null;
+            currentDatasource.name = '';
+            currentDatasource.type = 'mysql';
+            currentDatasource.host = 'localhost';
+            currentDatasource.port = 3306;
+            currentDatasource.database = '';
+            currentDatasource.username = '';
+            currentDatasource.password = '';
+            currentDatasource.minimumIdle = 5;
+            currentDatasource.maximumPoolSize = 10;
+            currentDatasource.connectionTimeout = 30000;
+            currentDatasource.sslEnabled = false;
+            currentDatasource.description = '';
+            currentDatasource.active = true;
+        };
+
+        const startCreateDatasource = () => {
+            showDatasourceDropdown.value = false;  // 关闭下拉菜单
+            editingDatasource.value = true;
+            resetDatasourceForm();
+            
+            // 根据数据库类型设置默认端口
+            const portMap = {
+                'mysql': 3306,
+                'postgresql': 5432,
+                'oracle': 1521,
+                'sqlserver': 1433,
+                'h2': 9092
+            };
+            currentDatasource.port = portMap[currentDatasource.type];
+            
+            // 显示数据源编辑弹窗
+            showDatasourceModal.value = true;
+        };
+
+        const editDataSource = (id) => {
+            const ds = availableDataSources.value.find(item => item.id === id);
+            if (ds) {
+                Object.assign(currentDatasource, ds);
+                editingDatasource.value = true;
+            }
+        };
+
+        const cancelEdit = () => {
+            editingDatasource.value = false;
+            resetDatasourceForm();
+        };
+
+        const testCurrentConnection = async () => {
+            try {
+                savingDatasource.value = true;
+                // 创建一个包含所有字段的对象，并确保password和encryptedPassword字段都被正确发送
+                const passwordValue = currentDatasource.password || '';
+                const datasourceData = {
+                    ...currentDatasource,
+                    password: passwordValue,
+                    encryptedPassword: passwordValue // 同时发送到encryptedPassword字段以满足后端验证
+                };
+                
+                const response = await apiRequest(DATASOURCE_API + '/test', {
+                    method: 'POST',
+                    body: JSON.stringify(datasourceData),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response && response.success) {
+                    showSuccess('连接测试成功！');
+                } else {
+                    showError(response?.message || '连接测试失败');
+                }
+            } catch (error) {
+                showError('连接测试失败: ' + error.message);
+            } finally {
+                savingDatasource.value = false;
+            }
+        };
+
+        const testDataSourceConnection = async (id) => {
+            try {
+                const ds = availableDataSources.value.find(item => item.id === id);
+                if (!ds) {
+                    showError('数据源不存在');
+                    return;
+                }
+                
+                // 创建一个包含所有字段的对象，并确保password和encryptedPassword字段都被正确发送
+                const passwordValue = ds.password || '';
+                const datasourceData = {
+                    ...ds,
+                    password: passwordValue,
+                    encryptedPassword: passwordValue // 同时发送到encryptedPassword字段以满足后端验证
+                };
+                
+                const response = await apiRequest(DATASOURCE_API + '/test', {
+                    method: 'POST',
+                    body: JSON.stringify(datasourceData),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response && response.success) {
+                    showSuccess('连接测试成功！');
+                } else {
+                    showError(response?.message || '连接测试失败');
+                }
+            } catch (error) {
+                showError('连接测试失败: ' + error.message);
+            }
+        };
+
+        const saveDatasource = async () => {
+            // 验证必填字段
+            if (!currentDatasource.name || !currentDatasource.host || !currentDatasource.port ||
+                !currentDatasource.database || !currentDatasource.username || !currentDatasource.password) {
+                showError('请填写所有必填字段');
+                return;
+            }
+
+            try {
+                savingDatasource.value = true;
+                let response;
+                
+                // 如果用户已有数据源，先删除旧的再创建新的（实现单数据源限制）
+                if (!currentDatasource.id && currentUserDataSource.value) {
+                    await apiRequest(`${DATASOURCE_API}/${currentUserDataSource.value.id}`, {
+                        method: 'DELETE'
+                    });
+                }
+                
+                if (currentDatasource.id) {
+                    // 更新数据源
+                    response = await apiRequest(`${DATASOURCE_API}/${currentDatasource.id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(currentDatasource)
+                    });
+                } else {
+                    // 创建数据源
+                    response = await apiRequest(DATASOURCE_API, {
+                        method: 'POST',
+                        body: JSON.stringify(currentDatasource)
+                    });
+                }
+                
+                if (response.success || response) {
+                    showSuccess(currentDatasource.id ? '数据源更新成功' : '数据源创建成功');
+                    // 刷新数据源列表
+                    await loadDataSources();
+                    
+                    // 使用nextTick确保UI响应式更新
+                    await nextTick();
+                    
+                    // 确保当前数据源已正确设置并被选中
+                    if (currentUserDataSource.value) {
+                        console.log('数据源已保存并刷新，当前数据源:', currentUserDataSource.value.name);
+                        // 明确地选中并激活新保存的数据源
+                        useDataSource(currentUserDataSource.value.id);
+                        
+                        // 额外等待一下，确保数据源激活完成
+                        await nextTick();
+                        
+                        // 显式检查连接状态
+                        if (!connectionStatus.value) {
+                            console.log('正在重新检查连接状态...');
+                            await checkConnection();
+                        }
+                        
+                        // 如果连接成功，可以提示用户
+                        if (connectionStatus.value) {
+                            showInfo('数据源已成功连接');
+                        }
+                    }
+                    
+                    showDatasourceModal.value = false;
+                    editingDatasource.value = false;
+                    resetDatasourceForm();
+                } else {
+                    showError(currentDatasource.id ? '数据源更新失败' : '数据源创建失败');
+                }
+            } catch (error) {
+                showError((currentDatasource.id ? '更新' : '创建') + '数据源失败: ' + error.message);
+            } finally {
+                savingDatasource.value = false;
+            }
+        };
+
+        const deleteDataSource = async (id, name) => {
+            try {
+                await ElMessageBox.confirm(
+                    `确定要删除数据源 "${name}" 吗？删除后将无法恢复。`,
+                    '确认删除',
+                    {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }
+                );
+
+                const response = await apiRequest(`${DATASOURCE_API}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.success || response) {
+                    showSuccess('数据源删除成功');
+                    await loadDataSources();
+                    
+                    // 如果删除的是当前选中的数据源，切换到其他数据源
+                    if (selectedDataSourceId.value === id && availableDataSources.value.length > 0) {
+                        selectedDataSourceId.value = availableDataSources.value[0].id;
+                        onDataSourceChange();
+                    }
+                } else {
+                    showError('数据源删除失败');
+                }
+            } catch (error) {
+                if (error !== 'cancel') {
+                    showError('删除数据源失败: ' + error.message);
+                }
+            }
+        };
+
+        const useDataSource = (id) => {
+            selectedDataSourceId.value = id;
+            onDataSourceChange();
+            closeDatasourceManager();
+        };
+
+        const onDataSourceChange = async () => {
+            console.log('onDataSourceChange执行开始，selectedDataSourceId:', selectedDataSourceId.value);
+
+            if (selectedDataSourceId.value) {
+                console.log('开始处理选中的数据源:', selectedDataSourceId.value);
+
+                // 清空之前的数据
+                schema.tables = [];
+                schema.totalColumns = 0;
+                showResults.value = false;
+                generatedSql.value = '';
+                queryResults.value = null;
+
+                // 设置当前数据库信息
+                console.log('查找数据源信息，availableDataSources长度:', availableDataSources.value.length);
+                const ds = availableDataSources.value.find(item => item.id === selectedDataSourceId.value);
+
+                if (ds) {
+                    console.log('找到数据源:', ds.name, '类型:', ds.type);
+                    // 使用数据源的真实数据库名，而不是数据源名称
+                    currentDatabase.value = ds.database;
+                    console.log('设置当前数据库名:', currentDatabase.value);
+
+                    // 直接检查连接状态，不需要重复激活（因为数据源在启动时已经初始化）
+                    try {
+                        console.log('直接检查数据源连接状态，调用API:', `${DATASOURCE_API}/${selectedDataSourceId.value}/status`);
+
+                        const statusResponse = await fetch(`${DATASOURCE_API}/${selectedDataSourceId.value}/status`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        console.log('数据源状态API响应状态:', statusResponse.status, statusResponse.statusText);
+                        const statusData = await statusResponse.json();
+                        console.log('数据源状态API响应数据:', statusData);
+
+                        // 检查连接状态
+                        if (statusResponse.ok && statusData.success && statusData.connected) {
+                            connectionStatus.value = true;
+                            console.log('数据源连接正常，设置connectionStatus为true');
+                            console.log('连接成功，开始加载数据库结构...');
+                            await loadSchema();
+                        } else {
+                            connectionStatus.value = false;
+                            console.log('数据源连接失败，设置connectionStatus为false');
+                            console.warn('连接失败，跳过加载数据库结构');
+                        }
+                    } catch (error) {
+                        console.error('检查数据源状态异常:', error);
+                        connectionStatus.value = false;
+                        showError('检查数据源状态出错: ' + error.message);
+                    }
+                } else {
+                    console.error('未找到ID为', selectedDataSourceId.value, '的数据源');
+                    showError('未找到选择的数据源');
+                }
+            } else {
+                console.log('没有选中数据源，执行清理工作');
+                // 没有选中数据源时的清理工作
+                schema.tables = [];
+                currentDatabase.value = '';
+                connectionStatus.value = false;
+            }
+
+            console.log('onDataSourceChange执行结束');
+        };
+
+        const getDataSourceTypeClass = (type) => {
+            const typeClasses = {
+                'mysql': 'badge-primary',
+                'postgresql': 'badge-info',
+                'oracle': 'badge-warning',
+                'sqlserver': 'badge-success',
+                'h2': 'badge-secondary'
+            };
+            return typeClasses[type] || 'badge-default';
+        };
+
+        const refreshDataSources = () => {
+            loadDataSources();
         };
 
         // API 请求封装
         const apiRequest = async (url, options = {}) => {
             try {
+                console.log('发送API请求:', url);
                 const defaultOptions = {
                     method: 'GET',
                     headers: {
@@ -89,19 +592,31 @@ const app = createApp({
                 };
 
                 const response = await fetch(url, { ...defaultOptions, ...options });
-                
+                console.log('收到响应状态:', response.status, response.statusText);
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const data = await response.json();
-                
+                const responseText = await response.text();
+                console.log('原始响应内容:', responseText);
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                    console.log('解析后的JSON数据:', data);
+                } catch (parseError) {
+                    console.error('JSON解析失败:', parseError);
+                    console.error('响应内容:', responseText);
+                    throw new Error('JSON解析失败: ' + parseError.message);
+                }
+
                 // 某些端点直接返回数据，不包含success字段
                 // 比如 /server-info, /tools 等
-                const isDirectResponse = url.includes('/server-info') || 
+                const isDirectResponse = url.includes('/server-info') ||
                                        url.includes('/tools') ||
                                        !data.hasOwnProperty('success');
-                
+
                 if (!isDirectResponse && !data.success) {
                     throw new Error(data.message || data.error || '请求失败');
                 }
@@ -116,25 +631,46 @@ const app = createApp({
         // 检查数据库连接
         const checkConnection = async () => {
             checking.value = true;
+            console.log('检查数据库连接开始，selectedDataSourceId:', selectedDataSourceId.value);
             try {
-                const response = await apiRequest(`${API_BASE}/server-info`);
-                connectionStatus.value = true;
-                currentDatabase.value = 'test'; // 暂时硬编码数据库名
-                showSuccess('数据库连接正常');
-                
-                // 自动加载数据库结构（仅在首次连接或结构为空时加载）
-                if (!schema.tables.length) {
-                    console.log('检测到数据库结构为空，自动加载结构');
-                    loadSchema();
+                // 只有在有选中的数据源时才检查连接
+                if (selectedDataSourceId.value) {
+                    console.log('开始调用数据源状态检查API，ID:', selectedDataSourceId.value);
+
+                    // 调用新的数据源状态检查API
+                    const response = await fetch(`${DATASOURCE_API}/${selectedDataSourceId.value}/status`);
+                    console.log('API响应状态:', response.status, response.statusText);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('API响应数据:', data);
+
+                        if (data.success && data.connected) {
+                            connectionStatus.value = true;
+                            console.log('设置connectionStatus为true');
+                            showSuccess(data.message || '数据库连接正常');
+                        } else {
+                            connectionStatus.value = false;
+                            console.log('设置connectionStatus为false');
+                            showError(data.message || '数据库连接失败');
+                        }
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
                 } else {
-                    console.log('数据库结构已缓存，跳过自动加载');
+                    console.log('没有选中的数据源，无法检查连接');
+                    connectionStatus.value = false;
+                    showInfo('请先配置数据源');
                 }
             } catch (error) {
+                console.error('数据库连接检查异常:', error);
                 connectionStatus.value = false;
+                console.log('设置connectionStatus为false');
                 currentDatabase.value = '';
                 showError('数据库连接失败: ' + error.message);
             } finally {
                 checking.value = false;
+                console.log('检查数据库连接结束，connectionStatus:', connectionStatus.value);
             }
         };
 
@@ -149,30 +685,98 @@ const app = createApp({
 
         // 加载数据库结构
         const loadSchema = async () => {
-            if (!connectionStatus.value) {
-                showError('请先检查数据库连接');
+            console.log('loadSchema函数执行，当前状态：', {
+                selectedDataSourceId: selectedDataSourceId.value,
+                connectionStatus: connectionStatus.value,
+                currentDatabase: currentDatabase.value
+            });
+            
+            if (!selectedDataSourceId.value) {
+                console.warn('没有选中的数据源，跳过加载结构');
+                showError('请先选择数据源');
                 return;
+            }
+            
+            // 如果连接状态未确认，先尝试检查连接，但即使失败也继续执行
+            if (!connectionStatus.value) {
+                showInfo('正在检查数据库连接...');
+                try {
+                    await checkConnection();
+                    console.log('连接检查完成，结果:', connectionStatus.value);
+                } catch (checkError) {
+                    console.error('连接检查出错，但继续尝试加载结构:', checkError);
+                    // 即使连接检查失败也继续执行
+                }
             }
 
             loadingSchema.value = true;
             try {
                 console.log('开始请求数据库结构...');
-                const response = await apiRequest(`${API_BASE}/database-schema`, {
-                    method: 'GET'
+                
+                // 使用直接的fetch API以获取更完整的响应信息
+                const response = await fetch(`${DATASOURCE_API}/${selectedDataSourceId.value}/schema`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
-                console.log('API响应:', response);
+                
+                console.log('API响应状态:', response.status);
+                const responseData = await response.json();
+                console.log('API响应数据:', responseData);
 
-                // 检查响应格式
-                if (!response.success) {
-                    throw new Error(response.error || '获取数据库结构失败');
+                // 更宽松的成功判断条件
+                if (response.ok || responseData.success || responseData.tables || responseData.data) {
+                    // 处理可能的不同响应格式
+                    if (responseData.tables) {
+                        // 如果响应直接包含tables字段，直接使用
+                        schema.tables = responseData.tables || [];
+                        schema.totalColumns = schema.tables.reduce((sum, table) => sum + (table.columns?.length || 0), 0);
+
+                        // 自动展开第一个表
+                        if (schema.tables.length > 0) {
+                            schema.tables[0].expanded = true;
+                        }
+                        showSuccess('数据库结构加载完成');
+                    } else if (responseData.data && responseData.data.tables) {
+                        // 如果响应包含data.tables字段（当前API格式），直接使用
+                        schema.tables = responseData.data.tables || [];
+                        schema.totalColumns = schema.tables.reduce((sum, table) => sum + (table.columns?.length || 0), 0);
+
+                        // 自动展开第一个表
+                        if (schema.tables.length > 0) {
+                            schema.tables[0].expanded = true;
+                        }
+                        showSuccess('数据库结构加载完成');
+                    } else if (responseData.content) {
+                        // 如果响应包含content字段，使用parseSchemaFromDescription解析
+                        parseSchemaFromDescription(responseData.content);
+                        showSuccess('数据库结构加载完成');
+                    } else {
+                        console.warn('未知的响应格式，responseData:', responseData);
+                        // 对于空的成功响应，不抛出错误，只是不加载表结构
+                        schema.tables = [];
+                        schema.totalColumns = 0;
+                        showInfo('数据库结构为空或格式不匹配');
+                    }
+                    
+                    // 加载成功后，强制将连接状态设为true
+                    connectionStatus.value = true;
+                    console.log('加载成功，强制设置连接状态为true');
+                } else {
+                    throw new Error(responseData.error || responseData.message || '获取数据库结构失败');
                 }
-
-                // 解析结构信息
-                parseSchemaFromDescription(response.content);
-                showSuccess('数据库结构加载完成');
             } catch (error) {
                 console.error('加载数据库结构失败:', error);
                 showError('加载数据库结构失败: ' + error.message);
+                
+                // 失败时也尝试重新检查连接状态
+                try {
+                    console.log('加载失败，重新检查连接状态...');
+                    await checkConnection();
+                } catch (checkError) {
+                    console.error('连接状态检查失败:', checkError);
+                }
             } finally {
                 loadingSchema.value = false;
             }
@@ -330,7 +934,8 @@ const app = createApp({
                     },
                     body: JSON.stringify({
                         prompt: userQuery.value,
-                        context: ''
+                        context: '',
+                        dataSourceId: selectedDataSourceId.value || currentUserDataSource.value?.id || null
                     })
                 });
 
@@ -761,14 +1366,14 @@ const app = createApp({
 
         // 组件挂载时执行
         onMounted(() => {
-            // 自动检查连接
-            checkConnection();
+            loadDataSources();
         });
 
         // 返回响应式数据和方法
         return {
             // 数据
             connectionStatus,
+            connected: computed(() => connectionStatus.value), // 为了兼容HTML模板中的connected引用
             checking,
             loadingSchema,
             converting,
@@ -793,6 +1398,17 @@ const app = createApp({
             correctedSql,
             feedbackDescription,
             
+            // 数据源管理
+            showDatasourceModal,
+            editingDatasource,
+            loadingDataSources,
+            savingDatasource,
+            availableDataSources,
+            selectedDataSourceId,
+            currentDatasource,
+            currentUserDataSource,
+            showDatasourceDropdown,
+            
             // 方法
             checkConnection,
             loadSchema,
@@ -811,7 +1427,27 @@ const app = createApp({
             submitFeedback,
             showFeedbackDialog,
             closeFeedbackDialog,
-            submitDetailedFeedback
+            submitDetailedFeedback,
+            
+            // 数据源管理方法
+            openDataSourceManager,
+            closeDatasourceManager,
+            startCreateDatasource,
+            editDataSource,
+            cancelEdit,
+            testCurrentConnection,
+            testDataSourceConnection,
+            saveDatasource,
+            deleteDataSource,
+            useDataSource,
+            onDataSourceChange,
+            getDataSourceTypeClass,
+            refreshDataSources,
+            toggleDatasourceDropdown,
+            editCurrentDatasource,
+            testCurrentUserConnection,
+            deleteCurrentDatasource,
+            getDatabaseTypeName
         };
     }
 });

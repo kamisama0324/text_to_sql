@@ -70,8 +70,9 @@ public class Text2SqlService {
         
         try {
             // 1. 获取数据库结构（使用缓存）
-            String targetDatabase = schemaDiscoveryService.getCurrentDatabaseName();
-            DatabaseSchema schema = schemaCache.getSchema(targetDatabase);
+            // 使用数据源ID作为缓存键，确保与UUID数据源ID正确关联
+            String dataSourceId = com.kami.springai.datasource.service.DataSourceContextHolder.getDataSourceId();
+            DatabaseSchema schema = schemaCache.getSchema(dataSourceId);
             
             // 2. 语义分析
             QuerySemantic semantic = semanticAnalyzer.analyzeQuery(userQuery, schema.getTables());
@@ -263,13 +264,13 @@ public class Text2SqlService {
      * 添加用户反馈学习接口
      */
     public void learnFromFeedback(String userQuery, String generatedSql, boolean isCorrect, 
-                                 String correctedSql, String database) {
+                                  String correctedSql, String database) {
         log.info("接收用户反馈学习: 查询='{}', 正确={}", userQuery, isCorrect);
         
         try {
-            String targetDatabase = database != null ? database : 
-                    schemaDiscoveryService.getCurrentDatabaseName();
-            DatabaseSchema schema = schemaCache.getSchema(targetDatabase);
+            // 使用数据源ID作为缓存键，保持与其他方法一致
+            String dataSourceId = com.kami.springai.datasource.service.DataSourceContextHolder.getDataSourceId();
+            DatabaseSchema schema = schemaCache.getSchema(dataSourceId);
             
             // 重新分析语义（用于学习）
             QuerySemantic semantic = semanticAnalyzer.analyzeQuery(userQuery, schema.getTables());
@@ -301,8 +302,9 @@ public class Text2SqlService {
         log.info("开始解释SQL语句: {}", sql);
         
         try {
-            String targetDatabase = schemaDiscoveryService.getCurrentDatabaseName();
-            DatabaseSchema schema = schemaCache.getSchema(targetDatabase);
+            // 使用数据源ID而不是数据库名称作为缓存键
+            String dataSourceId = com.kami.springai.datasource.service.DataSourceContextHolder.getDataSourceId();
+            DatabaseSchema schema = schemaCache.getSchema(dataSourceId);
             String schemaDescription = generateSchemaForAI(schema);
             
             String explainPrompt = String.format("""

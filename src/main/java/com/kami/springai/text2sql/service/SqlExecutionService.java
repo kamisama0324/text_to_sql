@@ -1,5 +1,6 @@
 package com.kami.springai.text2sql.service;
 
+import com.kami.springai.datasource.service.DynamicDataSourceManager;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +23,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SqlExecutionService {
 
-    private final DataSource dataSource;
+    private final DynamicDataSourceManager dynamicDataSourceManager;
 
     /**
      * 执行查询
@@ -35,7 +36,7 @@ public class SqlExecutionService {
         
         long startTime = System.currentTimeMillis();
         
-        try (Connection connection = dataSource.getConnection();
+        try (Connection connection = getCurrentDataSource().getConnection();
              PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
             
@@ -80,6 +81,13 @@ public class SqlExecutionService {
                     .executionTime(executionTime)
                     .build();
         }
+    }
+    
+    /**
+     * 获取当前数据源
+     */
+    private DataSource getCurrentDataSource() {
+        return dynamicDataSourceManager.getCurrentDataSource();
     }
 
     /**

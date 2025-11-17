@@ -1,5 +1,7 @@
 package com.kami.springai.text2sql.service;
 
+import com.kami.springai.datasource.service.DataSourceContextHolder;
+import com.kami.springai.datasource.service.DynamicDataSourceManager;
 import com.kami.springai.text2sql.model.DatabaseSchema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SchemaDiscoveryService {
 
-    private final DataSource dataSource;
+    private final DynamicDataSourceManager dynamicDataSourceManager;
 
     @Value("${spring.datasource.url:}")
     private String databaseUrl;
@@ -28,6 +30,12 @@ public class SchemaDiscoveryService {
      * 测试数据库连接
      */
     public boolean testConnection() {
+        DataSource dataSource = getCurrentDataSource();
+        if (dataSource == null) {
+            log.warn("没有配置数据源，无法测试连接");
+            return false;
+        }
+        
         try (Connection connection = dataSource.getConnection()) {
             return connection.isValid(5);
         } catch (Exception e) {
@@ -40,46 +48,74 @@ public class SchemaDiscoveryService {
      * 获取当前数据库名称
      */
     public String getCurrentDatabaseName() {
+        DataSource dataSource = getCurrentDataSource();
+        if (dataSource == null) {
+            log.warn("没有配置数据源，无法获取数据库名称");
+            return "";
+        }
+        
         try (Connection connection = dataSource.getConnection()) {
             return connection.getCatalog();
         } catch (Exception e) {
             log.error("获取数据库名称失败: {}", e.getMessage());
-            return "unknown_database";
+            return "";
         }
     }
 
     /**
-     * 发现数据库结构
+     * 发现数据库结构（使用当前上下文的数据源）
      */
     public DatabaseSchema discoverSchema() {
-        try (Connection connection = dataSource.getConnection()) {
-            String databaseName = connection.getCatalog();
-            List<DatabaseSchema.Table> tables = new ArrayList<>();
-
-            // 获取所有表
-            DatabaseMetaData metaData = connection.getMetaData();
-            try (ResultSet tablesResult = metaData.getTables(databaseName, null, "%", new String[]{"TABLE"})) {
-                while (tablesResult.next()) {
-                    String tableName = tablesResult.getString("TABLE_NAME");
-                    String tableComment = tablesResult.getString("REMARKS");
-                    
-                    List<DatabaseSchema.Column> columns = getTableColumns(metaData, databaseName, tableName);
-                    List<DatabaseSchema.ForeignKey> foreignKeys = getTableForeignKeys(metaData, databaseName, tableName);
-                    
-                    tables.add(DatabaseSchema.Table.builder()
-                            .name(tableName)
-                            .comment(tableComment)
-                            .columns(columns)
-                            .foreignKeys(foreignKeys)
-                            .build());
-                }
+        String dataSourceId = DataSourceContextHolder.getDataSourceId();
+        return discoverSchema(dataSourceId);
+    }
+    
+    /**
+     * 发现指定数据源的数据库结构
+     */
+    public DatabaseSchema discoverSchema(String dataSourceId) {
+        try {
+            // 使用指定数据源或当前上下文数据源
+            DataSource dataSource = dataSourceId != null ? 
+                dynamicDataSourceManager.getDataSourceById(dataSourceId).orElse(dynamicDataSourceManager.getCurrentDataSource()) :
+                dynamicDataSourceManager.getCurrentDataSource();
+                
+            if (dataSource == null) {
+                log.warn("没有配置数据源，无法发现数据库结构");
+                return DatabaseSchema.builder()
+                        .databaseName("")
+                        .tables(new ArrayList<>())
+                        .build();
             }
+                
+            try (Connection connection = dataSource.getConnection()) {
+                String databaseName = connection.getCatalog();
+                List<DatabaseSchema.Table> tables = new ArrayList<>();
 
-            return DatabaseSchema.builder()
-                    .databaseName(databaseName)
-                    .tables(tables)
-                    .build();
+                // 获取所有表
+                DatabaseMetaData metaData = connection.getMetaData();
+                try (ResultSet tablesResult = metaData.getTables(databaseName, null, "%", new String[]{"TABLE"})) {
+                    while (tablesResult.next()) {
+                        String tableName = tablesResult.getString("TABLE_NAME");
+                        String tableComment = tablesResult.getString("REMARKS");
+                        
+                        List<DatabaseSchema.Column> columns = getTableColumns(metaData, databaseName, tableName);
+                        List<DatabaseSchema.ForeignKey> foreignKeys = getTableForeignKeys(metaData, databaseName, tableName);
+                        
+                        tables.add(DatabaseSchema.Table.builder()
+                                .name(tableName)
+                                .comment(tableComment)
+                                .columns(columns)
+                                .foreignKeys(foreignKeys)
+                                .build());
+                    }
+                }
 
+                return DatabaseSchema.builder()
+                        .databaseName(databaseName)
+                        .tables(tables)
+                        .build();
+            }
         } catch (Exception e) {
             log.error("数据库结构发现失败: {}", e.getMessage(), e);
             throw new RuntimeException("数据库结构发现失败: " + e.getMessage());
@@ -87,29 +123,45 @@ public class SchemaDiscoveryService {
     }
 
     /**
+     * 获取当前数据源
+     */
+    private DataSource getCurrentDataSource() {
+        return dynamicDataSourceManager.getCurrentDataSource();
+    }
+    
+    /**
      * 获取指定表的结构
      */
     public DatabaseSchema.TableSchema getTableSchema(String tableName) {
+        DataSource dataSource = getCurrentDataSource();
+        if (dataSource == null) {
+            log.warn("没有配置数据源，无法获取表结构");
+            return DatabaseSchema.TableSchema.builder()
+                    .tableName(tableName)
+                    .tableComment("")
+                    .columns(new ArrayList<>())
+                    .build();
+        }
+        
         try (Connection connection = dataSource.getConnection()) {
-            String databaseName = connection.getCatalog();
             DatabaseMetaData metaData = connection.getMetaData();
-            
-            // 获取表注释
-            String tableComment = "";
-            try (ResultSet tablesResult = metaData.getTables(databaseName, null, tableName, new String[]{"TABLE"})) {
-                if (tablesResult.next()) {
-                    tableComment = tablesResult.getString("REMARKS");
-                }
-            }
+            String databaseName = getCurrentDatabaseName();
             
             List<DatabaseSchema.Column> columns = getTableColumns(metaData, databaseName, tableName);
+            List<DatabaseSchema.ForeignKey> foreignKeys = getTableForeignKeys(metaData, databaseName, tableName);
+            
+            String tableComment = "";
+            try (ResultSet tableResult = metaData.getTables(databaseName, null, tableName, new String[]{"TABLE"})) {
+                if (tableResult.next()) {
+                    tableComment = tableResult.getString("REMARKS") != null ? tableResult.getString("REMARKS") : "";
+                }
+            }
             
             return DatabaseSchema.TableSchema.builder()
                     .tableName(tableName)
                     .tableComment(tableComment)
                     .columns(columns)
                     .build();
-
         } catch (Exception e) {
             log.error("获取表结构失败: {}", e.getMessage(), e);
             throw new RuntimeException("获取表结构失败: " + e.getMessage());

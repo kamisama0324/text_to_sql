@@ -1,0 +1,22 @@
+{
+  "dataSources" : [ {
+    "id" : "ds-b726ccff",
+    "name" : "test",
+    "type" : "mysql",
+    "host" : "localhost",
+    "port" : 3306,
+    "database" : "test",
+    "username" : "root",
+    "password" : "root",
+    "minimumIdle" : 5,
+    "maximumPoolSize" : 10,
+    "connectionTimeout" : 30000,
+    "sslEnabled" : false,
+    "description" : "",
+    "createdAt" : "2025-11-16T13:00:07.090501",
+    "createdBy" : null,
+    "active" : true,
+    "driverClassName" : "com.mysql.cj.jdbc.Driver",
+    "default" : false
+  } ]
+}

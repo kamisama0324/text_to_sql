@@ -86,28 +86,28 @@ public class SchemaCache {
     /**
      * 获取数据库结构（带缓存）
      */
-    @Cacheable(value = "database-schema", key = "#databaseName")
-    public DatabaseSchema getSchema(String databaseName) {
-        log.debug("获取数据库结构: {}", databaseName);
+    @Cacheable(value = "database-schema", key = "#dataSourceId")
+    public DatabaseSchema getSchema(String dataSourceId) {
+        log.debug("获取数据源[{}]的数据库结构", dataSourceId);
         
         // 先检查本地缓存
-        CacheEntry entry = localCache.get(databaseName);
+        CacheEntry entry = localCache.get(dataSourceId);
         if (entry != null && !entry.isExpired()) {
-            log.debug("从本地缓存获取数据库结构: {}", databaseName);
+            log.debug("从本地缓存获取数据源[{}]的数据库结构", dataSourceId);
             return entry.getSchema();
         }
         
         // 缓存未命中，从数据库获取
         try {
-            DatabaseSchema schema = schemaDiscoveryService.discoverSchema();
+            DatabaseSchema schema = schemaDiscoveryService.discoverSchema(dataSourceId);
             
             // 更新本地缓存
-            localCache.put(databaseName, CacheEntry.builder()
+            localCache.put(dataSourceId, CacheEntry.builder()
                     .schema(schema)
                     .createTime(LocalDateTime.now())
                     .build());
             
-            log.info("数据库结构已缓存: {}", databaseName);
+            log.info("数据源[{}]的数据库结构已缓存", dataSourceId);
             return schema;
             
         } catch (Exception e) {
@@ -115,7 +115,7 @@ public class SchemaCache {
             
             // 如果有过期缓存，返回过期缓存作为备用
             if (entry != null) {
-                log.warn("使用过期缓存作为备用: {}", databaseName);
+                log.warn("使用过期缓存作为备用: {}", dataSourceId);
                 return entry.getSchema();
             }
             
@@ -126,9 +126,9 @@ public class SchemaCache {
     /**
      * 清除缓存
      */
-    public void clearCache(String databaseName) {
-        localCache.remove(databaseName);
-        log.info("已清除数据库结构缓存: {}", databaseName);
+    public void clearCache(String dataSourceId) {
+        localCache.remove(dataSourceId);
+        log.info("已清除数据源[{}]的数据库结构缓存", dataSourceId);
     }
 
     /**

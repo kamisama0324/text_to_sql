@@ -10,9 +10,6 @@
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
     
-    <!-- 引入图标库 -->
-    <link rel="stylesheet" href="https://unpkg.com/@element-plus/icons-vue/dist/style.css">
-    
     <!-- 引入字体 -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -33,23 +30,79 @@
         <!-- 顶部导航栏 -->
         <nav class="top-navbar">
             <div class="nav-container">
-                <div class="nav-brand">
-                    <div class="brand-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <div class="brand-text">
-                        <h1>Text2SQL <span class="ai-badge">AI</span></h1>
-                        <p>智能数据库查询平台</p>
+                <div class="nav-left">
+                    <!-- 数据源管理悬浮框按钮 -->
+                    <div class="datasource-dropdown-wrapper">
+                        <button class="datasource-dropdown-btn" @click="toggleDatasourceDropdown" title="数据源配置">
+                            <i class="fas fa-database"></i>
+                            <span>数据源配置</span>
+                            <i class="fas fa-chevron-down" :class="{ 'rotated': showDatasourceDropdown }"></i>
+                        </button>
+                        
+                        <!-- 数据源管理悬浮框 -->
+                        <div class="datasource-dropdown" v-if="showDatasourceDropdown">
+                            <div class="dropdown-header">
+                                <h4><i class="fas fa-database"></i> 数据源配置</h4>
+                                <button class="close-btn" @click="showDatasourceDropdown = false">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="dropdown-content">
+                                <div v-if="!currentUserDataSource">
+                                    <p class="no-datasource">您还没有配置数据源，请点击下方按钮添加</p>
+                                    <button class="btn btn-primary full-width" @click="startCreateDatasource">
+                                        <i class="fas fa-plus"></i>
+                                        添加数据源
+                                    </button>
+                                </div>
+                                
+                                <div v-else class="current-datasource-info">
+                                    <div class="datasource-details">
+                                        <h5>{{ currentUserDataSource.name }}</h5>
+                                        <p class="datasource-type">{{ getDatabaseTypeName(currentUserDataSource.type) }}</p>
+                                        <p class="datasource-connection">{{ currentUserDataSource.host }}:{{ currentUserDataSource.port }}</p>
+                                    </div>
+                                    
+                                    <div class="dropdown-actions">
+                                        <button class="btn btn-secondary" @click="editCurrentDatasource">
+                                            <i class="fas fa-edit"></i>
+                                            编辑
+                                        </button>
+                                        <button class="btn btn-info" @click="testCurrentUserConnection">
+                                            <i class="fas fa-plug"></i>
+                                            测试连接
+                                        </button>
+                                        <button class="btn btn-danger" @click="deleteCurrentDatasource">
+                                            <i class="fas fa-trash"></i>
+                                            删除
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="nav-status">
-                    <div class="connection-indicator" :class="{ active: connectionStatus }">
-                        <div class="indicator-dot"></div>
-                        <span>{{ connectionStatus ? '数据库已连接' : '数据库未连接' }}</span>
+                <div class="nav-center">
+                    <div class="nav-brand">
+                        <div class="brand-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div class="brand-text">
+                            <h1>Text2SQL <span class="ai-badge">AI</span></h1>
+                            <p>智能数据库查询平台</p>
+                        </div>
                     </div>
-                    <button class="refresh-btn" @click="checkConnection" :disabled="checking">
-                        <i class="fas fa-sync-alt" :class="{ 'fa-spin': checking }"></i>
+                </div>
+                
+                <div class="nav-right">
+                    <div class="connection-indicator" :class="{ active: connected }">
+                        <div class="indicator-dot"></div>
+                        <span>{{ connected ? '数据库已连接' : '数据库未连接' }}</span>
+                    </div>
+                    <button class="refresh-btn" @click="checkConnection" :disabled="loading">
+                        <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
                     </button>
                 </div>
             </div>
@@ -349,6 +402,260 @@
             <button class="fab" @click="scrollToTop" title="返回顶部">
                 <i class="fas fa-arrow-up"></i>
             </button>
+        </div>
+
+        <!-- 数据源管理对话框 -->
+        <div class="datasource-modal-overlay" v-if="showDatasourceModal" @click.self="closeDatasourceManager">
+            <div class="datasource-modal">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-database"></i>
+                        {{ editingDatasource ? '编辑数据源' : '数据源管理' }}
+                    </h3>
+                    <button class="close-btn" @click="closeDatasourceManager">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- 数据源列表视图 -->
+                <div v-if="!editingDatasource" class="modal-content">
+                    <div class="datasource-actions">
+                        <button class="btn btn-primary" @click="startCreateDatasource">
+                            <i class="fas fa-plus"></i>
+                            添加数据源
+                        </button>
+                        <button class="btn btn-secondary" @click="refreshDataSources">
+                            <i class="fas fa-sync-alt"></i>
+                            刷新列表
+                        </button>
+                    </div>
+
+                    <div class="datasource-list">
+                        <div v-if="loadingDataSources" class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <span>加载中...</span>
+                        </div>
+                        
+                        <div v-else-if="!availableDataSources.length" class="empty-state">
+                            <i class="fas fa-server"></i>
+                            <p>暂无配置的数据源</p>
+                            <button class="btn btn-primary" @click="startCreateDatasource">
+                                <i class="fas fa-plus"></i>
+                                添加第一个数据源
+                            </button>
+                        </div>
+                        
+                        <div v-else class="datasource-grid">
+                            <div 
+                                v-for="ds in availableDataSources" 
+                                :key="ds.id"
+                                class="datasource-card"
+                                :class="{ active: selectedDataSourceId === ds.id }"
+                            >
+                                <div class="datasource-header">
+                                    <div class="datasource-info">
+                                        <h4>{{ ds.name }}</h4>
+                                        <div class="datasource-meta">
+                                            <span class="badge" :class="getDataSourceTypeClass(ds.type)">{{ ds.type }}</span>
+                                            <span class="badge" :class="ds.active ? 'badge-success' : 'badge-warning'">
+                                                {{ ds.active ? '活跃' : '已停用' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="datasource-connection" :class="ds.active ? 'connected' : 'disconnected'">
+                                        <span class="connection-dot"></span>
+                                        {{ ds.active ? '已连接' : '未连接' }}
+                                    </div>
+                                </div>
+                                
+                                <div class="datasource-details">
+                                    <p><i class="fas fa-link"></i> {{ ds.host }}:{{ ds.port }}</p>
+                                    <p><i class="fas fa-database"></i> {{ ds.database }}</p>
+                                    <p><i class="fas fa-user"></i> {{ ds.username }}</p>
+                                </div>
+                                
+                                <div class="datasource-actions">
+                                    <button 
+                                        class="action-btn" 
+                                        @click="testDataSourceConnection(ds.id)"
+                                        title="测试连接"
+                                    >
+                                        <i class="fas fa-plug"></i>
+                                    </button>
+                                    <button 
+                                        class="action-btn" 
+                                        @click="editDataSource(ds.id)"
+                                        title="编辑"
+                                    >
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button 
+                                        class="action-btn danger" 
+                                        @click="deleteDataSource(ds.id, ds.name)"
+                                        title="删除"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <button 
+                                        class="action-btn primary" 
+                                        @click="useDataSource(ds.id)"
+                                        title="使用此数据源"
+                                    >
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据源编辑/创建视图 -->
+                <div v-else class="modal-content">
+                    <div class="datasource-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>数据源名称 <span class="required">*</span></label>
+                                <input 
+                                    v-model="currentDatasource.name"
+                                    type="text"
+                                    placeholder="请输入数据源名称"
+                                    class="form-input"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>数据库类型 <span class="required">*</span></label>
+                                <select v-model="currentDatasource.type" class="form-input">
+                                    <option value="mysql">MySQL</option>
+                                    <option value="postgresql">PostgreSQL</option>
+                                    <option value="oracle">Oracle</option>
+                                    <option value="sqlserver">SQL Server</option>
+                                    <option value="h2">H2</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>主机地址 <span class="required">*</span></label>
+                                <input 
+                                    v-model="currentDatasource.host"
+                                    type="text"
+                                    placeholder="请输入主机地址"
+                                    class="form-input"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>端口号 <span class="required">*</span></label>
+                                <input 
+                                    v-model.number="currentDatasource.port"
+                                    type="number"
+                                    class="form-input"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>数据库名称 <span class="required">*</span></label>
+                                <input 
+                                    v-model="currentDatasource.database"
+                                    type="text"
+                                    placeholder="请输入数据库名称"
+                                    class="form-input"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>用户名 <span class="required">*</span></label>
+                                <input 
+                                    v-model="currentDatasource.username"
+                                    type="text"
+                                    placeholder="请输入用户名"
+                                    class="form-input"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>密码 <span class="required">*</span></label>
+                            <input 
+                                v-model="currentDatasource.password"
+                                type="password"
+                                placeholder="请输入密码"
+                                class="form-input"
+                            >
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>最小连接数</label>
+                                <input 
+                                    v-model.number="currentDatasource.minimumIdle"
+                                    type="number"
+                                    class="form-input"
+                                    min="1"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>最大连接数</label>
+                                <input 
+                                    v-model.number="currentDatasource.maximumPoolSize"
+                                    type="number"
+                                    class="form-input"
+                                    min="1"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>连接超时时间（毫秒）</label>
+                            <input 
+                                v-model.number="currentDatasource.connectionTimeout"
+                                type="number"
+                                class="form-input"
+                                min="1000"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input 
+                                    v-model="currentDatasource.sslEnabled"
+                                    type="checkbox"
+                                >
+                                <span>启用SSL连接</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>描述（可选）</label>
+                            <textarea 
+                                v-model="currentDatasource.description"
+                                placeholder="请输入数据源描述"
+                                class="form-input"
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" @click="cancelEdit">
+                                取消
+                            </button>
+                            <button class="btn btn-primary" @click="testCurrentConnection" :disabled="savingDatasource">
+                                <i class="fas fa-plug"></i>
+                                测试连接
+                            </button>
+                            <button class="btn btn-success" @click="saveDatasource" :disabled="savingDatasource">
+                                <i class="fas fa-save"></i>
+                                保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 反馈对话框 -->

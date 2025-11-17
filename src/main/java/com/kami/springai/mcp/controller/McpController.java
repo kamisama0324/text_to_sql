@@ -208,16 +208,27 @@ public class McpController {
     @PostMapping("/text2sql")
     public ResponseEntity<SimpleMcpServer.ToolResult> convertTextToSql(@RequestBody McpRequest request) {
         try {
+            // 设置数据源上下文
+            if (request.getDataSourceId() != null) {
+                com.kami.springai.datasource.service.DataSourceContextHolder.setDataSourceId(request.getDataSourceId());
+                log.info("设置数据源上下文: {}", request.getDataSourceId());
+            } else {
+                log.warn("Text2SQL请求中未提供数据源ID");
+            }
+
             java.util.Map<String, Object> parameters = new java.util.HashMap<>();
             parameters.put("query", request.getPrompt());
             parameters.put("context", request.getContext());
-            
+
             SimpleMcpServer.ToolResult result = simpleMcpServer.executeTool("text_to_sql", parameters);
             return ResponseEntity.ok(result);
-            
+
         } catch (Exception e) {
             log.error("Text2SQL转换失败", e);
             return ResponseEntity.ok(SimpleMcpServer.ToolResult.error("转换失败: " + e.getMessage()));
+        } finally {
+            // 清理数据源上下文，避免影响其他请求
+            com.kami.springai.datasource.service.DataSourceContextHolder.clear();
         }
     }
 

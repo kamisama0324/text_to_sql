@@ -9,19 +9,22 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class McpRequest {
-    
+
     @JsonProperty("prompt")
     private String prompt;
-    
+
     @JsonProperty("mcp_type")
     private String mcpType; // filesystem, github, etc.
-    
+
     @JsonProperty("async")
     private boolean async = false;
-    
+
     @JsonProperty("timeout")
     private Long timeout = 30000L; // 默认30秒超时
-    
+
     @JsonProperty("context")
     private String context; // 额外上下文信息
+
+    @JsonProperty("dataSourceId")
+    private String dataSourceId; // 数据源ID，用于Text2SQL功能
 }
