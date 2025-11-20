@@ -124,6 +124,30 @@ public class EnhancedConfigurationManager {
             """;
     }
 
+    /**
+     * 智能选择最佳模型
+     * 根据查询复杂度和配置选择合适的模型提供商
+     */
+    public String selectBestModelProvider(String queryType, String complexity, boolean isGeminiAvailable) {
+        // 如果Gemini不可用，强制使用OpenAI (DeepSeek)
+        if (!isGeminiAvailable) {
+            return "openai";
+        }
+        
+        // 简单查询优先使用 Gemini Flash (速度快，成本低)
+        if ("simple".equalsIgnoreCase(complexity) || "list_query".equalsIgnoreCase(queryType)) {
+            return "gemini";
+        }
+        
+        // 复杂分析或详细查询使用 DeepSeek (推理能力强)
+        if ("complex".equalsIgnoreCase(complexity) || "analytics".equalsIgnoreCase(queryType)) {
+            return "openai";
+        }
+        
+        // 默认使用配置的提供商
+        return "default";
+    }
+
     private String getSyntaxErrorFixPrompt(Map<String, Object> errorDetails) {
         return String.format("""
             发现SQL语法错误，请修复以下问题：

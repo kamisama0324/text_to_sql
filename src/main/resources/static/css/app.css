@@ -4,20 +4,20 @@
   --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  
+
   /* 深色主题色调 */
   --bg-primary: #0a0a0f;
   --bg-secondary: #1a1a24;
   --bg-tertiary: #2a2a3a;
   --bg-card: rgba(255, 255, 255, 0.05);
   --bg-glass: rgba(255, 255, 255, 0.1);
-  
+
   /* 文本色调 */
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.8);
   --text-muted: rgba(255, 255, 255, 0.6);
   --text-accent: #667eea;
-  
+
   /* 边框和阴影 */
   --border-primary: rgba(255, 255, 255, 0.1);
   --border-accent: rgba(102, 126, 234, 0.3);
@@ -25,20 +25,20 @@
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.15);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.25);
   --shadow-glow: 0 0 30px rgba(102, 126, 234, 0.3);
-  
+
   /* 间距 */
   --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;
   --spacing-md: 1.5rem;
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
-  
+
   /* 圆角 */
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-xl: 30px;
-  
+
   /* 字体 */
   --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -115,7 +115,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 50px 50px;
@@ -123,13 +123,25 @@ body {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(180deg); }
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
 }
 
 @keyframes grid-move {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(50px, 50px); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  100% {
+    transform: translate(50px, 50px);
+  }
 }
 
 /* 应用容器 */
@@ -239,267 +251,268 @@ body {
 
 /* 数据源管理悬浮框样式 */
 .datasource-dropdown-wrapper {
-    position: relative;
-    z-index: 1000;
-    display: inline-block;
+  position: relative;
+  z-index: 1000;
+  display: inline-block;
 }
 
 .datasource-dropdown-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .datasource-dropdown-btn:hover {
-    background: linear-gradient(135deg, #4f46e5, #4338ca);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
-    transform: translateY(-2px);
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+  transform: translateY(-2px);
 }
 
 .datasource-dropdown-btn:active {
-    transform: translateY(0);
+  transform: translateY(0);
 }
 
 .datasource-dropdown-btn i {
-    font-size: 16px;
-    transition: transform 0.3s ease;
+  font-size: 16px;
+  transition: transform 0.3s ease;
 }
 
 .datasource-dropdown-btn i.rotated {
-    transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 /* 悬浮框样式 */
 .datasource-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    margin-top: 10px;
-    width: 360px;
-    background: rgba(23, 26, 33, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(20px);
-    animation: dropdownSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    overflow: hidden;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 10px;
+  width: 360px;
+  background: rgba(23, 26, 33, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  animation: dropdownSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 @keyframes dropdownSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* 悬浮框头部 */
 .dropdown-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px 16px;
-    background: rgba(30, 33, 40, 0.8);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  background: rgba(30, 33, 40, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .dropdown-header h4 {
-    margin: 0;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .dropdown-header h4 i {
-    color: #6366f1;
+  color: #6366f1;
 }
 
 .dropdown-header .close-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
-    color: #ccc;
-    cursor: pointer;
-    font-size: 18px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
 }
 
 .dropdown-header .close-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-    transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: scale(1.1);
 }
 
 /* 悬浮框内容 */
 .dropdown-content {
-    padding: 24px;
+  padding: 24px;
 }
 
 .no-datasource {
-    color: #94a3b8;
-    margin-bottom: 24px;
-    text-align: center;
-    line-height: 1.5;
-    font-size: 14px;
+  color: #94a3b8;
+  margin-bottom: 24px;
+  text-align: center;
+  line-height: 1.5;
+  font-size: 14px;
 }
 
 /* 当前数据源信息 */
 .current-datasource-info {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .datasource-details {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(79, 70, 229, 0.05));
-    padding: 16px 20px;
-    border-radius: 10px;
-    border-left: 4px solid #6366f1;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(79, 70, 229, 0.05));
+  padding: 16px 20px;
+  border-radius: 10px;
+  border-left: 4px solid #6366f1;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
 
 .datasource-details h5 {
-    margin: 0 0 10px 0;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
+  margin: 0 0 10px 0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .datasource-type {
-    font-size: 13px;
-    color: #a5b4fc;
-    margin: 0 0 6px 0;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 8px;
-    background: rgba(99, 102, 241, 0.2);
-    border-radius: 12px;
-    margin-bottom: 8px;
+  font-size: 13px;
+  color: #a5b4fc;
+  margin: 0 0 6px 0;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  margin-bottom: 8px;
 }
 
 .datasource-connection {
-    font-size: 13px;
-    color: #94a3b8;
-    margin: 0;
-    font-family: 'Inter', monospace;
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  font-family: 'Inter', monospace;
 }
 
 /* 操作按钮组 */
 .dropdown-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .dropdown-actions .btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .dropdown-actions .btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
 .dropdown-actions .btn:hover::before {
-    left: 100%;
+  left: 100%;
 }
 
 .dropdown-actions .btn-secondary {
-    background: linear-gradient(135deg, #475569, #334155);
-    color: white;
+  background: linear-gradient(135deg, #475569, #334155);
+  color: white;
 }
 
 .dropdown-actions .btn-secondary:hover {
-    background: linear-gradient(135deg, #334155, #1e293b);
-    transform: translateY(-1px);
+  background: linear-gradient(135deg, #334155, #1e293b);
+  transform: translateY(-1px);
 }
 
 .dropdown-actions .btn-info {
-    background: linear-gradient(135deg, #0ea5e9, #0284c7);
-    color: white;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: white;
 }
 
 .dropdown-actions .btn-info:hover {
-    background: linear-gradient(135deg, #0284c7, #0369a1);
-    transform: translateY(-1px);
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  transform: translateY(-1px);
 }
 
 .dropdown-actions .btn-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
 }
 
 .dropdown-actions .btn-danger:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    transform: translateY(-1px);
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
 }
 
 /* 全宽按钮样式 */
 .btn.full-width {
-    width: 100%;
-    justify-content: center;
+  width: 100%;
+  justify-content: center;
 }
 
 /* 全宽按钮 */
 .btn.full-width {
-    width: 100%;
+  width: 100%;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-    .datasource-dropdown-btn {
-        font-size: 13px;
-        padding: 6px 12px;
-    }
-    
-    .datasource-dropdown {
-        width: 280px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .dropdown-actions .btn {
-        font-size: 13px;
-        padding: 8px;
-    }
+  .datasource-dropdown-btn {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  .datasource-dropdown {
+    width: 280px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .dropdown-actions .btn {
+    font-size: 13px;
+    padding: 8px;
+  }
 }
 
 /* 数据源管理对话框样式 */
@@ -520,8 +533,13 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .datasource-modal {
@@ -543,6 +561,7 @@ body {
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -732,8 +751,13 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state {
@@ -816,6 +840,7 @@ body {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0.6;
   }
+
   100% {
     transform: translate(-50%, -50%) scale(3);
     opacity: 0;
@@ -1218,25 +1243,41 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(102, 126, 234, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+  }
 }
 
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0.3; }
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0.3;
+  }
 }
 
 /* 主体内容区 */
 .main-container {
   flex: 1;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--spacing-lg);
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: var(--spacing-xl);
+  grid-template-columns: 350px 1fr;
+  gap: var(--spacing-lg);
   width: 100%;
+  align-items: start;
 }
 
 /* 左侧面板样式 */
@@ -1246,14 +1287,20 @@ body {
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
-  height: fit-content;
+  height: calc(100vh - 100px);
   position: sticky;
+  top: 90px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   top: calc(80px + var(--spacing-lg));
   max-height: calc(100vh - 120px);
   overflow-y: auto;
   box-shadow: var(--shadow-md);
-  overflow-x: hidden; /* 防止水平溢出 */
-  width: 320px; /* 固定宽度 */
+  overflow-x: hidden;
+  /* 防止水平溢出 */
+  width: 320px;
+  /* 固定宽度 */
 }
 
 /* 右侧内容区域需要自适应 */
@@ -1662,17 +1709,15 @@ body {
 
 .query-textarea {
   width: 100%;
-  background: var(--bg-glass);
-  border: 2px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
   color: var(--text-primary);
-  padding: var(--spacing-md);
   font-size: 16px;
   line-height: 1.6;
   resize: vertical;
   min-height: 120px;
-  transition: all 0.3s ease;
-  font-family: var(--font-primary);
+  outline: none;
+  font-family: inherit;
 }
 
 .query-textarea:focus {
@@ -1888,8 +1933,15 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panel-header {
@@ -2132,56 +2184,56 @@ body {
     grid-template-columns: 1fr;
     padding: var(--spacing-md);
   }
-  
+
   .nav-container {
     padding: 0 var(--spacing-md);
     flex-wrap: wrap;
     gap: var(--spacing-sm);
   }
-  
+
   .nav-brand {
     flex: 1;
     min-width: 200px;
   }
-  
+
   .sidebar-panel {
     position: static;
     max-height: none;
     height: auto;
   }
-  
+
   .header-content h2 {
     font-size: 24px;
   }
-  
+
   .action-buttons {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .primary-actions {
     flex-wrap: wrap;
   }
-  
+
   .examples-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .tab-buttons {
     flex-wrap: wrap;
   }
-  
+
   .tab-btn {
     flex: none;
     min-width: 120px;
   }
-  
+
   .results-table th,
   .results-table td {
     padding: var(--spacing-xs) var(--spacing-sm);
     font-size: 12px;
   }
-  
+
   .floating-actions {
     bottom: var(--spacing-md);
     right: var(--spacing-md);
@@ -2193,26 +2245,26 @@ body {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .brand-text h1 {
     font-size: 20px;
   }
-  
+
   .main-container {
     padding: var(--spacing-sm);
   }
-  
+
   .query-section,
   .sidebar-panel {
     padding: var(--spacing-md);
   }
-  
+
   .header-content h2 {
     font-size: 20px;
     flex-direction: column;
     gap: var(--spacing-xs);
   }
-  
+
   .query-textarea {
     font-size: 14px;
     min-height: 100px;
@@ -2394,6 +2446,7 @@ body {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2552,19 +2605,19 @@ body {
     margin: var(--spacing-md);
     max-width: none;
   }
-  
+
   .feedback-actions {
     flex-direction: column;
   }
-  
+
   .feedback-btn {
     justify-content: center;
   }
-  
+
   .modal-footer {
     flex-direction: column-reverse;
   }
-  
+
   .btn {
     justify-content: center;
   }

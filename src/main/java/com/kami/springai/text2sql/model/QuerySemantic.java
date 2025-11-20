@@ -22,7 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QuerySemantic {
-    
+
     /**
      * 查询意图 - 用户查询的核心意图和类型
      * 
@@ -36,7 +36,7 @@ public class QuerySemantic {
      * @see IntentSemantic
      */
     private IntentSemantic intent;
-    
+
     /**
      * 实体列表 - 查询涉及的所有数据实体
      * 
@@ -45,14 +45,22 @@ public class QuerySemantic {
      * 
      * 例如，查询"显示所有VIP用户的订单总额"可能包含：
      * - EntitySemantic{entityName="用户", tableName="users", semanticType="TABLE"}
-     * - EntitySemantic{entityName="VIP", tableName="users.level", semanticType="VALUE"}
+     * - EntitySemantic{entityName="VIP", tableName="users.level",
+     * semanticType="VALUE"}
      * - EntitySemantic{entityName="订单", tableName="orders", semanticType="TABLE"}
-     * - EntitySemantic{entityName="总额", tableName="orders.amount", semanticType="COLUMN"}
+     * - EntitySemantic{entityName="总额", tableName="orders.amount",
+     * semanticType="COLUMN"}
      * 
      * @see EntitySemantic
      */
     private List<EntitySemantic> entities;
-    
+
+    /**
+     * Query complexity level
+     */
+    @Builder.Default
+    private String complexity = "simple"; // simple, moderate, complex
+
     /**
      * 条件列表 - 查询的所有过滤和约束条件
      * 
@@ -60,15 +68,17 @@ public class QuerySemantic {
      * 这些条件确保查询结果符合用户的特定要求。
      * 
      * 例如，查询"查找今年创建的金额大于1000的订单"可能包含：
-     * - ConditionSemantic{field="orders.create_time", operator=">=", value="2024-01-01", type="TIME_RANGE"}
-     * - ConditionSemantic{field="orders.amount", operator=">", value="1000", type="NUMERIC_RANGE"}
+     * - ConditionSemantic{field="orders.create_time", operator=">=",
+     * value="2024-01-01", type="TIME_RANGE"}
+     * - ConditionSemantic{field="orders.amount", operator=">", value="1000",
+     * type="NUMERIC_RANGE"}
      * 
      * 条件之间默认使用AND连接，复杂的OR条件需要特殊处理。
      * 
      * @see ConditionSemantic
      */
     private List<ConditionSemantic> conditions;
-    
+
     /**
      * 整体置信度分数（0.0-1.0）
      * 
